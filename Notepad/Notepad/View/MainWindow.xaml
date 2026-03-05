@@ -1,0 +1,49 @@
+﻿<Window x:Class="Notepad.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Notepad"
+        mc:Ignorable="d"
+        Title="Notepad" Height="450" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Menu Grid.Row="0" Grid.ColumnSpan="3">
+            <MenuItem Header="File" />
+            <MenuItem Header="Search" />
+            <MenuItem Header="View" />
+            <MenuItem Header="Help" />
+        </Menu>
+
+        <ToolBarTray Grid.Row="1" Grid.ColumnSpan="3">
+            <ToolBar>
+                <Button Content="New File" />
+                <Button Content="Open File" />
+                <Button Content="Save" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <TreeView Grid.Row="2" Grid.Column="0">
+        </TreeView>
+
+        <GridSplitter Grid.Row="2" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="LightGray" />
+
+        <TabControl Grid.Row="2" Grid.Column="2">
+            <TabItem Header="File 1">
+                <TextBox AcceptsReturn="True" TextWrapping="Wrap" />
+            </TabItem>
+        </TabControl>   
+
+    </Grid>
+</Window>
