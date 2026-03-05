@@ -3,9 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Notepad"
+        xmlns:vm="clr-namespace:Notepad.ViewModels"
         mc:Ignorable="d"
-        Title="Notepad" Height="450" Width="800">
+        Title="Notepad" Height="600" Width="1000">
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -20,7 +24,16 @@
         </Grid.ColumnDefinitions>
 
         <Menu Grid.Row="0" Grid.ColumnSpan="3">
-            <MenuItem Header="File" />
+            <MenuItem Header="File">
+                <MenuItem Header="New file" Command="{Binding NewFileCommand}" />
+
+                <MenuItem Header="Save file" Command="{Binding SaveCommand}" />
+                <MenuItem Header="Save file as..." Command="{Binding SaveAsCommand}" />
+
+                <MenuItem Header="Close file" Command="{Binding CloseFileCommand}" />
+                <Separator />
+                <MenuItem Header="Exit" />
+            </MenuItem>
             <MenuItem Header="Search" />
             <MenuItem Header="View" />
             <MenuItem Header="Help" />
@@ -28,22 +41,34 @@
 
         <ToolBarTray Grid.Row="1" Grid.ColumnSpan="3">
             <ToolBar>
-                <Button Content="New File" />
-                <Button Content="Open File" />
-                <Button Content="Save" />
+                <Button Content="New" Command="{Binding NewFileCommand}" />
+                <Button Content="Close" Command="{Binding CloseFileCommand}" />
+                <Button Content="Save" Command="{Binding SaveCommand}" />
             </ToolBar>
         </ToolBarTray>
+
 
         <TreeView Grid.Row="2" Grid.Column="0">
         </TreeView>
 
         <GridSplitter Grid.Row="2" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="LightGray" />
+        <TabControl Grid.Row="2" Grid.Column="2" 
+                    ItemsSource="{Binding Documents}" 
+                    SelectedItem="{Binding SelectedDocument}">
 
-        <TabControl Grid.Row="2" Grid.Column="2">
-            <TabItem Header="File 1">
-                <TextBox AcceptsReturn="True" TextWrapping="Wrap" />
-            </TabItem>
-        </TabControl>   
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+            </TabControl.ItemTemplate>
 
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <TextBox AcceptsReturn="True" TextWrapping="Wrap" 
+                             Text="{Binding TextContent, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+
+        </TabControl>
     </Grid>
 </Window>
