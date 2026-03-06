@@ -8,9 +8,10 @@ using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 
+
 namespace Notepad.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public class MainViewModel : ObservableObject
     {
         private DocumentModel _selectedDocument;
         public ObservableCollection<DocumentModel> Documents { get; set; }
@@ -126,11 +127,6 @@ namespace Notepad.ViewModels
                 SelectedDocument = Documents[Documents.Count - 1]; 
             }
         }
-        public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
     }
 }

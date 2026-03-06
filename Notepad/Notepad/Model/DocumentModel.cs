@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Notepad.ViewModel;
 
 namespace Notepad.Model
 {
-    public class DocumentModel : INotifyPropertyChanged
+    public class DocumentModel : ObservableObject
     {
         private string _fileName;
         private string _textContent;
@@ -59,10 +60,5 @@ namespace Notepad.Model
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
     }
 }
