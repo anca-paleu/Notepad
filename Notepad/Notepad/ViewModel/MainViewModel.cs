@@ -30,7 +30,9 @@ namespace Notepad.ViewModels
         public ICommand NewFileCommand { get; }
         public ICommand CloseFileCommand { get; }
         public ICommand SaveCommand { get; } 
-        public ICommand SaveAsCommand { get; } 
+        public ICommand SaveAsCommand { get; }
+
+        public ICommand OpenFileCommand { get; }
 
         public MainViewModel()
         {
@@ -43,6 +45,8 @@ namespace Notepad.ViewModels
             SaveCommand = new RelayCommand(param => SaveFile());
 
             SaveAsCommand = new RelayCommand(param => SaveFileAs());
+
+            OpenFileCommand = new RelayCommand(param => OpenFile());
 
             CreateNewFile();
         }
@@ -95,6 +99,38 @@ namespace Notepad.ViewModels
             }
 
             return false; 
+        }
+
+        private void OpenFile()
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+
+            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+
+            if (dialog.ShowDialog() == true)
+            {
+                foreach (var doc in Documents)
+                {
+                    if (doc.FilePath == dialog.FileName)
+                    {
+                        SelectedDocument = doc;
+                        return;
+                    }
+                }
+
+                string textFisier = File.ReadAllText(dialog.FileName);
+
+                var openedTab = new DocumentModel
+                {
+                    FilePath = dialog.FileName,
+                    FileName = Path.GetFileName(dialog.FileName),
+                    TextContent = textFisier,
+                    IsModified = false
+                };
+
+                Documents.Add(openedTab);
+                SelectedDocument = openedTab;
+            }
         }
         private void CloseFile()
         {

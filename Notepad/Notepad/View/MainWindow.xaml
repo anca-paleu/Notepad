@@ -26,10 +26,9 @@
         <Menu Grid.Row="0" Grid.ColumnSpan="3">
             <MenuItem Header="File">
                 <MenuItem Header="New file" Command="{Binding NewFileCommand}" />
-
+                <MenuItem Header="Open file..." Command="{Binding OpenFileCommand}" />
                 <MenuItem Header="Save file" Command="{Binding SaveCommand}" />
                 <MenuItem Header="Save file as..." Command="{Binding SaveAsCommand}" />
-
                 <MenuItem Header="Close file" Command="{Binding CloseFileCommand}" />
                 <Separator />
                 <MenuItem Header="Exit" />
@@ -42,6 +41,7 @@
         <ToolBarTray Grid.Row="1" Grid.ColumnSpan="3">
             <ToolBar>
                 <Button Content="New" Command="{Binding NewFileCommand}" />
+                <Button Content="Open" Command="{Binding OpenFileCommand}" />
                 <Button Content="Close" Command="{Binding CloseFileCommand}" />
                 <Button Content="Save" Command="{Binding SaveCommand}" />
             </ToolBar>
