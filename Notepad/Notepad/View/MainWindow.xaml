@@ -9,7 +9,11 @@
     <Window.DataContext>
         <vm:MainViewModel />
     </Window.DataContext>
-    
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -18,9 +22,9 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto" MinWidth="0" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <Menu Grid.Row="0" Grid.ColumnSpan="3">
@@ -34,7 +38,10 @@
                 <MenuItem Header="Exit" />
             </MenuItem>
             <MenuItem Header="Search" />
-            <MenuItem Header="View" />
+            <MenuItem Header="View">
+                <MenuItem Header="Standard" Command="{Binding ViewStandardCommand}" />
+                <MenuItem Header="Folder Explorer" Command="{Binding ViewFolderExplorerCommand}" />
+            </MenuItem>
             <MenuItem Header="Help" />
         </Menu>
 
@@ -47,11 +54,42 @@
             </ToolBar>
         </ToolBarTray>
 
+        <TreeView Grid.Row="2" Grid.Column="0" 
+                  HorizontalAlignment="Stretch"
+                  MinWidth="150"
+                  ScrollViewer.HorizontalScrollBarVisibility="Visible" 
+                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                  Visibility="{Binding IsFolderExplorerVisible, Converter={StaticResource BoolToVis}}"
+                  ItemsSource="{Binding Directories}"
+                  BorderThickness="0">
 
-        <TreeView Grid.Row="2" Grid.Column="0">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                    <TextBlock Text="{Binding Name}" TextWrapping="NoWrap" Background="Transparent">
+                        <TextBlock.InputBindings>
+                            <MouseBinding MouseAction="LeftDoubleClick" 
+                              Command="{Binding DataContext.OpenFileFromTreeCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                              CommandParameter="{Binding}" />
+                        </TextBlock.InputBindings>
+                    </TextBlock>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </Style>
+            </TreeView.ItemContainerStyle>
         </TreeView>
 
-        <GridSplitter Grid.Row="2" Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="LightGray" />
+        <GridSplitter Grid.Row="2" Grid.Column="1" Width="5" 
+                      HorizontalAlignment="Center" VerticalAlignment="Stretch" 
+                      Background="LightGray"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Columns"
+                      Visibility="{Binding IsFolderExplorerVisible, Converter={StaticResource BoolToVis}}" 
+                      ShowsPreview="True" />
+
         <TabControl Grid.Row="2" Grid.Column="2" 
                     ItemsSource="{Binding Documents}" 
                     SelectedItem="{Binding SelectedDocument}">
@@ -64,8 +102,12 @@
 
             <TabControl.ContentTemplate>
                 <DataTemplate>
-                    <TextBox AcceptsReturn="True" TextWrapping="Wrap" 
-                             Text="{Binding TextContent, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBox AcceptsReturn="True" 
+                             TextWrapping="Wrap" 
+                             Text="{Binding TextContent, UpdateSourceTrigger=PropertyChanged}"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Stretch"
+                             VerticalScrollBarVisibility="Auto" />
                 </DataTemplate>
             </TabControl.ContentTemplate>
 

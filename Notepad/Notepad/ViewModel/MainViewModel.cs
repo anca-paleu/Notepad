@@ -1,12 +1,14 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using Microsoft.Win32;
 using Notepad.Model;
 using Notepad.ViewModel;
-using System.IO;
-using System.Windows;
-using Microsoft.Win32;
+using System.Linq;
 
 
 namespace Notepad.ViewModels
@@ -33,6 +35,12 @@ namespace Notepad.ViewModels
         public ICommand SaveAsCommand { get; }
 
         public ICommand OpenFileCommand { get; }
+        public ICommand ViewStandardCommand { get; }
+        public ICommand ViewFolderExplorerCommand { get; }
+
+        public ObservableCollection<DirectoryItem> Directories { get; set; }
+
+        public ICommand OpenFileFromTreeCommand { get; }
 
         public MainViewModel()
         {
@@ -47,6 +55,25 @@ namespace Notepad.ViewModels
             SaveAsCommand = new RelayCommand(param => SaveFileAs());
 
             OpenFileCommand = new RelayCommand(param => OpenFile());
+
+            IsFolderExplorerVisible = false;
+
+            Directories = new ObservableCollection<DirectoryItem>();
+
+            foreach (var drive in Directory.GetLogicalDrives())
+            {
+                var driveItem = new DirectoryItem { Name = drive, FullPath = drive };
+
+                driveItem.Children.Add(new DirectoryItem { Name = "..." });
+
+                Directories.Add(driveItem);
+            }
+
+            ViewStandardCommand = new RelayCommand(param => IsFolderExplorerVisible = false);
+
+            ViewFolderExplorerCommand = new RelayCommand(param => IsFolderExplorerVisible = true);
+
+            OpenFileFromTreeCommand = new RelayCommand(OpenFileFromTree);
 
             CreateNewFile();
         }
@@ -164,5 +191,51 @@ namespace Notepad.ViewModels
             }
         }
 
+        private bool _isFolderExplorerVisible;
+        public bool IsFolderExplorerVisible
+        {
+            get { return _isFolderExplorerVisible; }
+            set
+            {
+                _isFolderExplorerVisible = value;
+                OnPropertyChanged();
+            }
+        }
+
+
+        private void OpenFileFromTree(object param)
+        {
+            if (param is DirectoryItem node)
+            {
+                if (System.IO.Directory.Exists(node.FullPath)) return;
+
+                var existingTab = Documents.FirstOrDefault(d => d.FilePath == node.FullPath);
+                if (existingTab != null)
+                {
+                    SelectedDocument = existingTab;
+                    return;
+                }
+
+                try
+                {
+                    string content = System.IO.File.ReadAllText(node.FullPath);
+
+                    var newTab = new DocumentModel
+                    {
+                        FileName = node.Name,
+                        FilePath = node.FullPath,
+                        TextContent = content,
+                        IsModified = false
+                    };
+
+                    Documents.Add(newTab);
+                    SelectedDocument = newTab;
+                }
+                catch (System.Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Eroare la deschiderea fișierului: {ex.Message}");
+                }
+            }
+        }
     }
 }
