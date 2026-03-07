@@ -335,7 +335,7 @@ namespace Notepad.ViewModels
                         return;
                     }
 
-                    CopyDirectoryRecursively(_clipboardFolderPath, destFolderPath);
+                    CopyDirectory(_clipboardFolderPath, destFolderPath);
 
                     destinationFolder.Children.Clear();
                     destinationFolder.Children.Add(new DirectoryItem { Name = "..." });
@@ -349,7 +349,7 @@ namespace Notepad.ViewModels
             }
         }
 
-        private void CopyDirectoryRecursively(string sourceDir, string destinationDir)
+        private void CopyDirectory(string sourceDir, string destinationDir)
         {
             try
             {
@@ -373,7 +373,7 @@ namespace Notepad.ViewModels
                     foreach (DirectoryInfo subDir in dir.GetDirectories())
                     {
                         string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-                        CopyDirectoryRecursively(subDir.FullName, newDestinationDir);
+                        CopyDirectory(subDir.FullName, newDestinationDir);
                     }
                 }
                 catch {}
