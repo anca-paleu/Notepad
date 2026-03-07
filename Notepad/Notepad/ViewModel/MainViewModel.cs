@@ -42,6 +42,13 @@ namespace Notepad.ViewModels
 
         public ICommand OpenFileFromTreeCommand { get; }
 
+        private string _clipboardFolderPath;
+        public ICommand NewFileInFolderCommand { get; }
+        public ICommand CopyPathCommand { get; }
+        public ICommand CopyFolderCommand { get; }
+        public ICommand PasteFolderCommand { get; }
+
+
         public MainViewModel()
         {
             Documents = new ObservableCollection<DocumentModel>();
@@ -62,7 +69,7 @@ namespace Notepad.ViewModels
 
             foreach (var drive in Directory.GetLogicalDrives())
             {
-                var driveItem = new DirectoryItem { Name = drive, FullPath = drive };
+                var driveItem = new DirectoryItem { Name = drive, FullPath = drive, IsDirectory = true};
 
                 driveItem.Children.Add(new DirectoryItem { Name = "..." });
 
@@ -74,6 +81,14 @@ namespace Notepad.ViewModels
             ViewFolderExplorerCommand = new RelayCommand(param => IsFolderExplorerVisible = true);
 
             OpenFileFromTreeCommand = new RelayCommand(OpenFileFromTree);
+
+            NewFileInFolderCommand = new RelayCommand(NewFileInFolder);
+
+            CopyPathCommand = new RelayCommand(CopyPath);
+
+            CopyFolderCommand = new RelayCommand(CopyFolder);
+
+            PasteFolderCommand = new RelayCommand(PasteFolder, param => !string.IsNullOrEmpty(_clipboardFolderPath) && Directory.Exists(_clipboardFolderPath));
 
             CreateNewFile();
         }
@@ -235,6 +250,136 @@ namespace Notepad.ViewModels
                 {
                     System.Windows.MessageBox.Show($"Eroare la deschiderea fișierului: {ex.Message}");
                 }
+            }
+        }
+        private void NewFileInFolder(object param)
+        {
+            try
+            {
+                if (param is DirectoryItem folder && folder.IsDirectory)
+                {
+                    string newFileName = "NewFile.txt";
+                    string newFilePath = Path.Combine(folder.FullPath, newFileName);
+
+                    int counter = 1;
+                    while (File.Exists(newFilePath))
+                    {
+                        newFileName = $"NewFile ({counter}).txt";
+                        newFilePath = Path.Combine(folder.FullPath, newFileName);
+                        counter++;
+                    }
+
+                    File.WriteAllText(newFilePath, string.Empty);
+
+                    folder.Children.Clear();
+                    folder.Children.Add(new DirectoryItem { Name = "..." });
+                    folder.IsExpanded = false;
+                    folder.IsExpanded = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Eroare la crearea fisierului: {ex.Message}", "Eroare", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+
+        private void CopyPath(object param)
+        {
+            if (param is DirectoryItem folder && folder.IsDirectory && !string.IsNullOrEmpty(folder.FullPath))
+            {
+                try
+                {
+                    Clipboard.SetDataObject(folder.FullPath, true);
+                }
+                catch (System.Runtime.InteropServices.COMException)
+                {
+                }
+                catch (System.Exception ex)
+                {
+                    MessageBox.Show($"Eroare la copiere: {ex.Message}", "Notepad", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void CopyFolder(object param)
+        {
+            try
+            {
+                if (param is DirectoryItem folder && folder.IsDirectory)
+                {
+                    _clipboardFolderPath = folder.FullPath;
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"A apărut o problemă: {ex.Message}", "Eroare", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void PasteFolder(object param)
+        {
+            try
+            {
+                if (param is DirectoryItem destinationFolder && destinationFolder.IsDirectory)
+                {
+                    if (string.IsNullOrEmpty(_clipboardFolderPath) || !Directory.Exists(_clipboardFolderPath)) return;
+
+                    string sourceFolderName = new DirectoryInfo(_clipboardFolderPath).Name;
+                    string destFolderPath = Path.Combine(destinationFolder.FullPath, sourceFolderName);
+
+                    if (destFolderPath.StartsWith(_clipboardFolderPath, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        MessageBox.Show("Nu se poate copia un folder in el insusi sau intr-un subfolder al sau.", "Actiune nepermisa", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    CopyDirectoryRecursively(_clipboardFolderPath, destFolderPath);
+
+                    destinationFolder.Children.Clear();
+                    destinationFolder.Children.Add(new DirectoryItem { Name = "..." });
+                    destinationFolder.IsExpanded = false;
+                    destinationFolder.IsExpanded = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Eroare la lipire: {ex.Message}", "Eroare Paste", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CopyDirectoryRecursively(string sourceDir, string destinationDir)
+        {
+            try
+            {
+                DirectoryInfo dir = new DirectoryInfo(sourceDir);
+                if (!dir.Exists) return;
+
+                Directory.CreateDirectory(destinationDir);
+
+                try
+                {
+                    foreach (FileInfo file in dir.GetFiles())
+                    {
+                        string targetFilePath = Path.Combine(destinationDir, file.Name);
+                        file.CopyTo(targetFilePath, true);
+                    }
+                }
+                catch {}
+
+                try
+                {
+                    foreach (DirectoryInfo subDir in dir.GetDirectories())
+                    {
+                        string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                        CopyDirectoryRecursively(subDir.FullName, newDestinationDir);
+                    }
+                }
+                catch {}
+            }
+            catch
+            {
             }
         }
     }

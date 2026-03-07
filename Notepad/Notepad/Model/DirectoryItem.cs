@@ -11,6 +11,8 @@ namespace Notepad.Model
         public string Name { get; set; }
         public string FullPath { get; set; }
 
+        public bool IsDirectory { get; set; }
+
         public ObservableCollection<DirectoryItem> Children { get; set; }
 
         private bool _isExpanded;
@@ -47,7 +49,8 @@ namespace Notepad.Model
                         var subDir = new DirectoryItem
                         {
                             Name = new DirectoryInfo(dir).Name,
-                            FullPath = dir
+                            FullPath = dir,
+                            IsDirectory = true
                         };
                         subDir.Children.Add(new DirectoryItem { Name = "..." });
                         Children.Add(subDir);
@@ -58,7 +61,8 @@ namespace Notepad.Model
                         Children.Add(new DirectoryItem
                         {
                             Name = Path.GetFileName(file),
-                            FullPath = file
+                            FullPath = file,
+                            IsDirectory = false
                         });
                     }
                 }

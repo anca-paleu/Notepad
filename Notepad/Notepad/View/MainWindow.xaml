@@ -65,12 +65,44 @@
 
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                    <TextBlock Text="{Binding Name}" TextWrapping="NoWrap" Background="Transparent">
+                    <TextBlock Text="{Binding Name}" TextWrapping="NoWrap" Background="Transparent"
+               Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}">
+
                         <TextBlock.InputBindings>
                             <MouseBinding MouseAction="LeftDoubleClick" 
-                              Command="{Binding DataContext.OpenFileFromTreeCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                              CommandParameter="{Binding}" />
+                          Command="{Binding DataContext.OpenFileFromTreeCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                          CommandParameter="{Binding}" />
                         </TextBlock.InputBindings>
+
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                                        <Setter Property="ContextMenu">
+                                            <Setter.Value>
+                                                <ContextMenu>
+                                                    <MenuItem Header="New file" 
+                                              Command="{Binding PlacementTarget.Tag.NewFileInFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                                                    <MenuItem Header="Copy path" 
+                                              Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                                                    <MenuItem Header="Copy folder" 
+                                              Command="{Binding PlacementTarget.Tag.CopyFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                                                    <MenuItem Header="Paste folder" 
+                                              Command="{Binding PlacementTarget.Tag.PasteFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
                     </TextBlock>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
