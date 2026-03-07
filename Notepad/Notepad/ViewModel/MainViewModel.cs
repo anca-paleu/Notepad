@@ -88,10 +88,6 @@ namespace Notepad.ViewModels
             SaveAsCommand = new RelayCommand(param => fileOps.SaveFileAs());
             OpenFileCommand = new RelayCommand(param => fileOps.OpenFile());
 
-            FindCommand = new RelayCommand(param => searchOps.Find(SearchText, SearchAllTabs));
-            ReplaceCommand = new RelayCommand(param => searchOps.Replace(SearchText, ReplaceText, SearchAllTabs));
-            ReplaceAllCommand = new RelayCommand(param => searchOps.ReplaceAll(SearchText, ReplaceText, SearchAllTabs));
-
             OpenFileFromTreeCommand = new RelayCommand(dirOps.OpenFileFromTree);
             NewFileInFolderCommand = new RelayCommand(dirOps.NewFileInFolder);
             CopyPathCommand = new RelayCommand(dirOps.CopyPath);
@@ -104,32 +100,17 @@ namespace Notepad.ViewModels
 
             ExitCommand = new RelayCommand(param => Application.Current.Shutdown());
 
-            AboutCommand = new RelayCommand(param =>
-            {
-                var window = new Window
-                {
-                    Title = "About",
-                    Height = 150,
-                    Width = 350,
-                    ResizeMode = ResizeMode.NoResize,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-                var panel = new System.Windows.Controls.StackPanel
-                {
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(20)
-                };
-                panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Paleu Anca-Nicoleta", FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center });
-                panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Grupa 10LF243", HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
-                var link = new Hyperlink { NavigateUri = new Uri("mailto:anca.paleu@student.unitbv.ro") };
-                link.Inlines.Add("anca.paleu@student.unitbv.ro");
-                link.RequestNavigate += (s, e) => Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-                var linkBlock = new System.Windows.Controls.TextBlock { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
-                linkBlock.Inlines.Add(link);
-                panel.Children.Add(linkBlock);
-                window.Content = panel;
-                window.ShowDialog();
-            });
+            var dialogService = new DialogService();
+
+            FindCommand = new RelayCommand(param => dialogService.ShowFind(text => searchOps.Find(text, SearchAllTabs)));
+
+            ReplaceCommand = new RelayCommand(param => dialogService.ShowReplace(
+                (s, r) => searchOps.Replace(s, r, SearchAllTabs)));
+
+            ReplaceAllCommand = new RelayCommand(param => dialogService.ShowReplace(
+                (s, r) => searchOps.ReplaceAll(s, r, SearchAllTabs)));
+
+            AboutCommand = new RelayCommand(param => dialogService.ShowAbout());
 
             Directories = new ObservableCollection<DirectoryItem>();
             foreach (var drive in Directory.GetLogicalDrives())

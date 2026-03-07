@@ -46,43 +46,55 @@ namespace Notepad.ViewModels
         {
             if (string.IsNullOrEmpty(searchText)) return;
 
+            string pattern = $@"\b{System.Text.RegularExpressions.Regex.Escape(searchText)}\b";
+
             if (allTabs)
             {
                 foreach (var doc in _documents)
                 {
                     if (doc.TextContent == null) continue;
-                    int index = doc.TextContent.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
-                    if (index >= 0)
-                        doc.TextContent = doc.TextContent.Remove(index, searchText.Length).Insert(index, replaceText ?? "");
+                    doc.TextContent = System.Text.RegularExpressions.Regex.Replace(
+                        doc.TextContent, pattern, replaceText ?? "",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 }
             }
             else
             {
                 var selected = _getSelected();
                 if (selected?.TextContent == null) return;
-                int idx = selected.TextContent.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
-                if (idx >= 0)
-                    selected.TextContent = selected.TextContent.Remove(idx, searchText.Length).Insert(idx, replaceText ?? "");
+
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    selected.TextContent, pattern,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (match.Success)
+                    selected.TextContent = selected.TextContent.Remove(match.Index, match.Length)
+                                                               .Insert(match.Index, replaceText ?? "");
                 else
                     MessageBox.Show($"\"{searchText}\" not found.", "Replace", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
-
         public void ReplaceAll(string searchText, string replaceText, bool allTabs)
         {
             if (string.IsNullOrEmpty(searchText)) return;
+
+            string pattern = $@"\b{System.Text.RegularExpressions.Regex.Escape(searchText)}\b";
 
             if (allTabs)
             {
                 foreach (var doc in _documents)
                     if (doc.TextContent != null)
-                        doc.TextContent = doc.TextContent.Replace(searchText, replaceText ?? "", StringComparison.OrdinalIgnoreCase);
+                        doc.TextContent = System.Text.RegularExpressions.Regex.Replace(
+                            doc.TextContent, pattern, replaceText ?? "",
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             }
             else
             {
                 var selected = _getSelected();
                 if (selected?.TextContent == null) return;
-                selected.TextContent = selected.TextContent.Replace(searchText, replaceText ?? "", StringComparison.OrdinalIgnoreCase);
+                selected.TextContent = System.Text.RegularExpressions.Regex.Replace(
+                    selected.TextContent, pattern, replaceText ?? "",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             }
         }
     }
