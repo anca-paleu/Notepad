@@ -2,10 +2,11 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Notepad.ViewModel;
 
 namespace Notepad.Model
 {
-    public class DirectoryItem : INotifyPropertyChanged
+    public class DirectoryItem : ObservableObject
     {
         public string Name { get; set; }
         public string FullPath { get; set; }
@@ -69,10 +70,6 @@ namespace Notepad.Model
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+
     }
 }

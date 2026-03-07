@@ -54,7 +54,7 @@ namespace Notepad.Model
             get
             {
                 if (_isModified)
-                    return _fileName + " *";
+                    return _fileName + "*";
                 else
                     return _fileName;       
             }
