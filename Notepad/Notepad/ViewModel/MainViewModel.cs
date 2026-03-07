@@ -248,7 +248,7 @@ namespace Notepad.ViewModels
                 }
                 catch (System.Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Eroare la deschiderea fișierului: {ex.Message}");
+                    System.Windows.MessageBox.Show($"Error opening file: {ex.Message}");
                 }
             }
         }
@@ -279,7 +279,7 @@ namespace Notepad.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Eroare la crearea fisierului: {ex.Message}", "Eroare", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error creating file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -297,7 +297,7 @@ namespace Notepad.ViewModels
                 }
                 catch (System.Exception ex)
                 {
-                    MessageBox.Show($"Eroare la copiere: {ex.Message}", "Notepad", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Copy error: {ex.Message}", "Notepad", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -314,7 +314,7 @@ namespace Notepad.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"A apărut o problemă: {ex.Message}", "Eroare", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"A problem occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -331,8 +331,7 @@ namespace Notepad.ViewModels
 
                     if (destFolderPath.StartsWith(_clipboardFolderPath, System.StringComparison.OrdinalIgnoreCase))
                     {
-                        MessageBox.Show("Nu se poate copia un folder in el insusi sau intr-un subfolder al sau.", "Actiune nepermisa", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
+                        MessageBox.Show("Cannot copy a folder into itself or into one of its subfolders.", "Action Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning); return;
                     }
 
                     CopyDirectory(_clipboardFolderPath, destFolderPath);
@@ -345,7 +344,7 @@ namespace Notepad.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Eroare la lipire: {ex.Message}", "Eroare Paste", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Paste error: {ex.Message}", "Paste Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
