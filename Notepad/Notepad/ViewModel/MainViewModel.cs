@@ -31,6 +31,9 @@ namespace Notepad.ViewModels
 
         public ICommand NewFileCommand { get; }
         public ICommand CloseFileCommand { get; }
+
+        public ICommand CloseAllFilesCommand { get; }
+
         public ICommand SaveCommand { get; } 
         public ICommand SaveAsCommand { get; }
 
@@ -56,6 +59,8 @@ namespace Notepad.ViewModels
             NewFileCommand = new RelayCommand(param => CreateNewFile());
 
             CloseFileCommand = new RelayCommand(param => CloseFile());
+
+            CloseAllFilesCommand = new RelayCommand(param => CloseAllFiles());
 
             SaveCommand = new RelayCommand(param => SaveFile());
 
@@ -95,11 +100,13 @@ namespace Notepad.ViewModels
 
         private void CreateNewFile()
         {
-            int newNumber = Documents.Count + 1;
+            int number = 1;
+            while (Documents.Any(d => d.FileName == $"new {number}" || d.FileName == $"new {number}*"))
+                number++;
 
             var newTab = new DocumentModel
             {
-                FileName = $"new {newNumber}",
+                FileName = $"new {number}",
                 TextContent = "",
                 IsModified = false
             };
@@ -176,9 +183,7 @@ namespace Notepad.ViewModels
         }
         private void CloseFile()
         {
-            if (SelectedDocument == null || Documents.Count <= 1) return;
-
-            bool canClose = true; 
+            if (SelectedDocument == null) return;
 
             if (SelectedDocument.IsModified)
             {
@@ -188,22 +193,46 @@ namespace Notepad.ViewModels
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Question);
 
+                if (result == MessageBoxResult.Cancel) return;
+
                 if (result == MessageBoxResult.Yes)
                 {
                     bool didSave = SaveFile();
-                    if (!didSave) canClose = false;
-                }
-                else if (result == MessageBoxResult.Cancel)
-                {
-                    canClose = false;
+                    if (!didSave) return;
                 }
             }
 
-            if (canClose)
+            Documents.Remove(SelectedDocument);
+
+            if (Documents.Count == 0)
+                CreateNewFile();
+            else
+                SelectedDocument = Documents[Documents.Count - 1];
+        }
+        private void CloseAllFiles()
+        {
+            foreach (var doc in Documents.ToList())
             {
-                Documents.Remove(SelectedDocument);
-                SelectedDocument = Documents[Documents.Count - 1]; 
+                if (doc.IsModified)
+                {
+                    MessageBoxResult result = MessageBox.Show(
+                        $"Save file \"{doc.FileName}\"?",
+                        "Notepad",
+                        MessageBoxButton.YesNoCancel,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Cancel) return;
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        bool didSave = SaveFile();
+                        if (!didSave) return;
+                    }
+                }
             }
+
+            Documents.Clear();
+            CreateNewFile();
         }
 
         private bool _isFolderExplorerVisible;

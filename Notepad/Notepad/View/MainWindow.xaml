@@ -34,6 +34,7 @@
                 <MenuItem Header="Save file" Command="{Binding SaveCommand}" />
                 <MenuItem Header="Save file as..." Command="{Binding SaveAsCommand}" />
                 <MenuItem Header="Close file" Command="{Binding CloseFileCommand}" />
+                <MenuItem Header="Close all files" Command="{Binding CloseAllFilesCommand}" />
                 <Separator />
                 <MenuItem Header="Exit" />
             </MenuItem>
