@@ -1,14 +1,18 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 using Notepad.Model;
 using Notepad.ViewModel;
-using System.Linq;
+using System.Diagnostics;
+
 
 
 namespace Notepad.ViewModels
@@ -50,6 +54,34 @@ namespace Notepad.ViewModels
         public ICommand CopyPathCommand { get; }
         public ICommand CopyFolderCommand { get; }
         public ICommand PasteFolderCommand { get; }
+
+        private string _searchText;
+        public string SearchText
+        {
+            get { return _searchText; }
+            set { _searchText = value; OnPropertyChanged(); }
+        }
+
+        private string _replaceText;
+        public string ReplaceText
+        {
+            get { return _replaceText; }
+            set { _replaceText = value; OnPropertyChanged(); }
+        }
+
+        private bool _searchAllTabs;
+        public bool SearchAllTabs
+        {
+            get { return _searchAllTabs; }
+            set { _searchAllTabs = value; OnPropertyChanged(); }
+        }
+
+        public ICommand FindCommand { get; }
+        public ICommand ReplaceCommand { get; }
+        public ICommand ReplaceAllCommand { get; }
+        public ICommand ExitCommand { get; }
+
+        public ICommand AboutCommand { get; }
 
 
         public MainViewModel()
@@ -94,6 +126,42 @@ namespace Notepad.ViewModels
             CopyFolderCommand = new RelayCommand(CopyFolder);
 
             PasteFolderCommand = new RelayCommand(PasteFolder, param => !string.IsNullOrEmpty(_clipboardFolderPath) && Directory.Exists(_clipboardFolderPath));
+
+            FindCommand = new RelayCommand(param => Find());
+
+            ReplaceCommand = new RelayCommand(param => Replace());
+
+            ReplaceAllCommand = new RelayCommand(param => ReplaceAll());
+
+            ExitCommand = new RelayCommand(param => Application.Current.Shutdown());
+
+            AboutCommand = new RelayCommand(param =>
+            {
+                var window = new Window
+                {
+                    Title = "About",
+                    Height = 150,
+                    Width = 350,
+                    ResizeMode = ResizeMode.NoResize,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                var panel = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20) };
+
+                panel.Children.Add(new TextBlock { Text = "Paleu Anca-Nicoleta", FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center });
+                panel.Children.Add(new TextBlock { Text = "Grupa 10LF243", HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
+
+                var link = new Hyperlink { NavigateUri = new Uri("mailto:anca.paleu@student.unitbv.ro") };
+                link.Inlines.Add("anca.paleu@student.unitbv.ro");
+                link.RequestNavigate += (s, e) => Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+
+                var linkBlock = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
+                linkBlock.Inlines.Add(link);
+                panel.Children.Add(linkBlock);
+
+                window.Content = panel;
+                window.ShowDialog();
+            });
 
             CreateNewFile();
         }
@@ -409,6 +477,83 @@ namespace Notepad.ViewModels
             catch
             {
             }
+        }
+
+        private void Find()
+        {
+            if (string.IsNullOrEmpty(SearchText)) return;
+
+            if (SearchAllTabs)
+            {
+                foreach (var doc in Documents)
+                {
+                    int index = doc.TextContent?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) ?? -1;
+                    if (index >= 0)
+                    {
+                        SelectedDocument = doc;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (SelectedDocument == null) return;
+                int index = SelectedDocument.TextContent?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) ?? -1;
+                if (index < 0)
+                    MessageBox.Show($"\"{SearchText}\" not found.", "Find", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void Replace()
+        {
+            if (string.IsNullOrEmpty(SearchText)) return;
+
+            if (SearchAllTabs)
+            {
+                foreach (var doc in Documents)
+                {
+                    if (doc.TextContent != null && doc.TextContent.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        int index = doc.TextContent.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase);
+                        doc.TextContent = doc.TextContent.Remove(index, SearchText.Length).Insert(index, ReplaceText ?? "");
+                    }
+                }
+            }
+            else
+            {
+                if (SelectedDocument == null) return;
+                if (SelectedDocument.TextContent == null) return;
+
+                int idx = SelectedDocument.TextContent.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                    SelectedDocument.TextContent = SelectedDocument.TextContent.Remove(idx, SearchText.Length).Insert(idx, ReplaceText ?? "");
+                else
+                    MessageBox.Show($"\"{SearchText}\" not found.", "Replace", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void ReplaceAll()
+        {
+            if (string.IsNullOrEmpty(SearchText)) return;
+
+            if (SearchAllTabs)
+            {
+                foreach (var doc in Documents)
+                {
+                    if (doc.TextContent != null)
+                        doc.TextContent = doc.TextContent.Replace(SearchText, ReplaceText ?? "", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            else
+            {
+                if (SelectedDocument == null) return;
+                if (SelectedDocument.TextContent == null) return;
+                SelectedDocument.TextContent = SelectedDocument.TextContent.Replace(SearchText, ReplaceText ?? "", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
         }
     }
 }

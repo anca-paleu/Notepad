@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Notepad.ViewModels"
+        xmlns:local="clr-namespace:Notepad.View"
         mc:Ignorable="d"
         Title="Notepad" Height="600" Width="1000">
     <Window.DataContext>
@@ -12,6 +13,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <local:InverseBoolConverter x:Key="InverseBool" />
     </Window.Resources>
 
     <Grid>
@@ -36,14 +38,23 @@
                 <MenuItem Header="Close file" Command="{Binding CloseFileCommand}" />
                 <MenuItem Header="Close all files" Command="{Binding CloseAllFilesCommand}" />
                 <Separator />
-                <MenuItem Header="Exit" />
+                <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
-            <MenuItem Header="Search" />
+            <MenuItem Header="Search">
+                <MenuItem Header="All tabs"      IsCheckable="True" IsChecked="{Binding SearchAllTabs}" />
+                <MenuItem Header="Selected tab"  IsCheckable="True" IsChecked="{Binding SearchAllTabs, Converter={StaticResource InverseBool}}" />
+                <Separator/>
+                <MenuItem Header="Find..." Command="{Binding FindCommand}" />
+                <MenuItem Header="Replace..." Command="{Binding ReplaceCommand}" />
+                <MenuItem Header="Replace All..." Command="{Binding ReplaceAllCommand}" />
+            </MenuItem>
             <MenuItem Header="View">
                 <MenuItem Header="Standard" Command="{Binding ViewStandardCommand}" />
                 <MenuItem Header="Folder Explorer" Command="{Binding ViewFolderExplorerCommand}" />
             </MenuItem>
-            <MenuItem Header="Help" />
+            <MenuItem Header="Help">
+                <MenuItem Header="About" Command="{Binding AboutCommand}"/>
+            </MenuItem>
         </Menu>
 
         <ToolBarTray Grid.Row="1" Grid.ColumnSpan="3">
@@ -52,6 +63,14 @@
                 <Button Content="Open" Command="{Binding OpenFileCommand}" />
                 <Button Content="Close" Command="{Binding CloseFileCommand}" />
                 <Button Content="Save" Command="{Binding SaveCommand}" />
+                <TextBlock Text="Search:" VerticalAlignment="Center" Margin="5,0"/>
+                <TextBox Width="150" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="3,0"/>
+                <TextBlock Text="Replace:" VerticalAlignment="Center" Margin="5,0"/>
+                <TextBox Width="150" Text="{Binding ReplaceText, UpdateSourceTrigger=PropertyChanged}" Margin="3,0"/>
+                <CheckBox Content="All tabs" IsChecked="{Binding SearchAllTabs}" VerticalAlignment="Center" Margin="5,0"/>
+                <Button Content="Find"        Command="{Binding FindCommand}"       Margin="3,0"/>
+                <Button Content="Replace"     Command="{Binding ReplaceCommand}"    Margin="3,0"/>
+                <Button Content="Replace All" Command="{Binding ReplaceAllCommand}" Margin="3,0"/>
             </ToolBar>
         </ToolBarTray>
 
