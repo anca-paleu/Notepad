@@ -1,19 +1,15 @@
-﻿using System.Collections.ObjectModel;
-using System.ComponentModel;
+﻿using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
 using Microsoft.Win32;
 using Notepad.Model;
 using Notepad.ViewModel;
-using System.Diagnostics;
-
-
+using Notepad.ViewModels;
 
 namespace Notepad.ViewModels
 {
@@ -25,35 +21,8 @@ namespace Notepad.ViewModels
         public DocumentModel SelectedDocument
         {
             get { return _selectedDocument; }
-            set
-            {
-                _selectedDocument = value;
-                OnPropertyChanged();
-            }
+            set { _selectedDocument = value; OnPropertyChanged(); }
         }
-
-
-        public ICommand NewFileCommand { get; }
-        public ICommand CloseFileCommand { get; }
-
-        public ICommand CloseAllFilesCommand { get; }
-
-        public ICommand SaveCommand { get; } 
-        public ICommand SaveAsCommand { get; }
-
-        public ICommand OpenFileCommand { get; }
-        public ICommand ViewStandardCommand { get; }
-        public ICommand ViewFolderExplorerCommand { get; }
-
-        public ObservableCollection<DirectoryItem> Directories { get; set; }
-
-        public ICommand OpenFileFromTreeCommand { get; }
-
-        private string _clipboardFolderPath;
-        public ICommand NewFileInFolderCommand { get; }
-        public ICommand CopyPathCommand { get; }
-        public ICommand CopyFolderCommand { get; }
-        public ICommand PasteFolderCommand { get; }
 
         private string _searchText;
         public string SearchText
@@ -76,62 +45,62 @@ namespace Notepad.ViewModels
             set { _searchAllTabs = value; OnPropertyChanged(); }
         }
 
+        private bool _isFolderExplorerVisible;
+        public bool IsFolderExplorerVisible
+        {
+            get { return _isFolderExplorerVisible; }
+            set { _isFolderExplorerVisible = value; OnPropertyChanged(); }
+        }
+
+        public ObservableCollection<DirectoryItem> Directories { get; set; }
+
+        public ICommand NewFileCommand { get; }
+        public ICommand CloseFileCommand { get; }
+        public ICommand CloseAllFilesCommand { get; }
+        public ICommand SaveCommand { get; }
+        public ICommand SaveAsCommand { get; }
+        public ICommand OpenFileCommand { get; }
+        public ICommand ViewStandardCommand { get; }
+        public ICommand ViewFolderExplorerCommand { get; }
+        public ICommand OpenFileFromTreeCommand { get; }
+        public ICommand NewFileInFolderCommand { get; }
+        public ICommand CopyPathCommand { get; }
+        public ICommand CopyFolderCommand { get; }
+        public ICommand PasteFolderCommand { get; }
         public ICommand FindCommand { get; }
         public ICommand ReplaceCommand { get; }
         public ICommand ReplaceAllCommand { get; }
         public ICommand ExitCommand { get; }
-
         public ICommand AboutCommand { get; }
-
 
         public MainViewModel()
         {
             Documents = new ObservableCollection<DocumentModel>();
 
-            NewFileCommand = new RelayCommand(param => CreateNewFile());
+            var fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+            var searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+            var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
 
-            CloseFileCommand = new RelayCommand(param => CloseFile());
+            NewFileCommand = new RelayCommand(param => fileOps.CreateNewFile());
+            CloseFileCommand = new RelayCommand(param => fileOps.CloseFile());
+            CloseAllFilesCommand = new RelayCommand(param => fileOps.CloseAllFiles());
+            SaveCommand = new RelayCommand(param => fileOps.SaveFile());
+            SaveAsCommand = new RelayCommand(param => fileOps.SaveFileAs());
+            OpenFileCommand = new RelayCommand(param => fileOps.OpenFile());
 
-            CloseAllFilesCommand = new RelayCommand(param => CloseAllFiles());
+            FindCommand = new RelayCommand(param => searchOps.Find(SearchText, SearchAllTabs));
+            ReplaceCommand = new RelayCommand(param => searchOps.Replace(SearchText, ReplaceText, SearchAllTabs));
+            ReplaceAllCommand = new RelayCommand(param => searchOps.ReplaceAll(SearchText, ReplaceText, SearchAllTabs));
 
-            SaveCommand = new RelayCommand(param => SaveFile());
-
-            SaveAsCommand = new RelayCommand(param => SaveFileAs());
-
-            OpenFileCommand = new RelayCommand(param => OpenFile());
-
-            IsFolderExplorerVisible = false;
-
-            Directories = new ObservableCollection<DirectoryItem>();
-
-            foreach (var drive in Directory.GetLogicalDrives())
-            {
-                var driveItem = new DirectoryItem { Name = drive, FullPath = drive, IsDirectory = true};
-
-                driveItem.Children.Add(new DirectoryItem { Name = "..." });
-
-                Directories.Add(driveItem);
-            }
+            OpenFileFromTreeCommand = new RelayCommand(dirOps.OpenFileFromTree);
+            NewFileInFolderCommand = new RelayCommand(dirOps.NewFileInFolder);
+            CopyPathCommand = new RelayCommand(dirOps.CopyPath);
+            CopyFolderCommand = new RelayCommand(dirOps.CopyFolder);
+            PasteFolderCommand = new RelayCommand(dirOps.PasteFolder,
+                param => !string.IsNullOrEmpty(dirOps.ClipboardFolderPath) && Directory.Exists(dirOps.ClipboardFolderPath));
 
             ViewStandardCommand = new RelayCommand(param => IsFolderExplorerVisible = false);
-
             ViewFolderExplorerCommand = new RelayCommand(param => IsFolderExplorerVisible = true);
-
-            OpenFileFromTreeCommand = new RelayCommand(OpenFileFromTree);
-
-            NewFileInFolderCommand = new RelayCommand(NewFileInFolder);
-
-            CopyPathCommand = new RelayCommand(CopyPath);
-
-            CopyFolderCommand = new RelayCommand(CopyFolder);
-
-            PasteFolderCommand = new RelayCommand(PasteFolder, param => !string.IsNullOrEmpty(_clipboardFolderPath) && Directory.Exists(_clipboardFolderPath));
-
-            FindCommand = new RelayCommand(param => Find());
-
-            ReplaceCommand = new RelayCommand(param => Replace());
-
-            ReplaceAllCommand = new RelayCommand(param => ReplaceAll());
 
             ExitCommand = new RelayCommand(param => Application.Current.Shutdown());
 
@@ -145,415 +114,33 @@ namespace Notepad.ViewModels
                     ResizeMode = ResizeMode.NoResize,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner
                 };
-
-                var panel = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20) };
-
-                panel.Children.Add(new TextBlock { Text = "Paleu Anca-Nicoleta", FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center });
-                panel.Children.Add(new TextBlock { Text = "Grupa 10LF243", HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
-
+                var panel = new System.Windows.Controls.StackPanel
+                {
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(20)
+                };
+                panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Paleu Anca-Nicoleta", FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center });
+                panel.Children.Add(new System.Windows.Controls.TextBlock { Text = "Grupa 10LF243", HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
                 var link = new Hyperlink { NavigateUri = new Uri("mailto:anca.paleu@student.unitbv.ro") };
                 link.Inlines.Add("anca.paleu@student.unitbv.ro");
                 link.RequestNavigate += (s, e) => Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
-
-                var linkBlock = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
+                var linkBlock = new System.Windows.Controls.TextBlock { HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
                 linkBlock.Inlines.Add(link);
                 panel.Children.Add(linkBlock);
-
                 window.Content = panel;
                 window.ShowDialog();
             });
 
-            CreateNewFile();
-        }
-
-        private void CreateNewFile()
-        {
-            int number = 1;
-            while (Documents.Any(d => d.FileName == $"new {number}" || d.FileName == $"new {number}*"))
-                number++;
-
-            var newTab = new DocumentModel
+            Directories = new ObservableCollection<DirectoryItem>();
+            foreach (var drive in Directory.GetLogicalDrives())
             {
-                FileName = $"new {number}",
-                TextContent = "",
-                IsModified = false
-            };
-
-            Documents.Add(newTab);
-            SelectedDocument = newTab; 
-        }
-
-        private bool SaveFile()
-        {
-            if (SelectedDocument == null) return false;
-
-            if (string.IsNullOrEmpty(SelectedDocument.FilePath))
-            {
-                return SaveFileAs();
+                var driveItem = new DirectoryItem { Name = drive, FullPath = drive, IsDirectory = true };
+                driveItem.Children.Add(new DirectoryItem { Name = "..." });
+                Directories.Add(driveItem);
             }
 
-            File.WriteAllText(SelectedDocument.FilePath, SelectedDocument.TextContent);
-            SelectedDocument.IsModified = false; 
-            return true;
-        }
-
-        private bool SaveFileAs()
-        {
-            if (SelectedDocument == null) return false;
-
-            SaveFileDialog dialog = new SaveFileDialog();
-            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-            dialog.FileName = SelectedDocument.FileName;
-
-            if (dialog.ShowDialog() == true)
-            {
-                SelectedDocument.FilePath = dialog.FileName; 
-                SelectedDocument.FileName = Path.GetFileName(dialog.FileName);
-
-                File.WriteAllText(SelectedDocument.FilePath, SelectedDocument.TextContent); 
-                SelectedDocument.IsModified = false; 
-                return true;
-            }
-
-            return false; 
-        }
-
-        private void OpenFile()
-        {
-            OpenFileDialog dialog = new OpenFileDialog();
-
-            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-
-            if (dialog.ShowDialog() == true)
-            {
-                foreach (var doc in Documents)
-                {
-                    if (doc.FilePath == dialog.FileName)
-                    {
-                        SelectedDocument = doc;
-                        return;
-                    }
-                }
-
-                string textFisier = File.ReadAllText(dialog.FileName);
-
-                var openedTab = new DocumentModel
-                {
-                    FilePath = dialog.FileName,
-                    FileName = Path.GetFileName(dialog.FileName),
-                    TextContent = textFisier,
-                    IsModified = false
-                };
-
-                Documents.Add(openedTab);
-                SelectedDocument = openedTab;
-            }
-        }
-        private void CloseFile()
-        {
-            if (SelectedDocument == null) return;
-
-            if (SelectedDocument.IsModified)
-            {
-                MessageBoxResult result = MessageBox.Show(
-                    $"Save file \"{SelectedDocument.FileName}\"?",
-                    "Notepad",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Cancel) return;
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    bool didSave = SaveFile();
-                    if (!didSave) return;
-                }
-            }
-
-            Documents.Remove(SelectedDocument);
-
-            if (Documents.Count == 0)
-                CreateNewFile();
-            else
-                SelectedDocument = Documents[Documents.Count - 1];
-        }
-        private void CloseAllFiles()
-        {
-            foreach (var doc in Documents.ToList())
-            {
-                if (doc.IsModified)
-                {
-                    MessageBoxResult result = MessageBox.Show(
-                        $"Save file \"{doc.FileName}\"?",
-                        "Notepad",
-                        MessageBoxButton.YesNoCancel,
-                        MessageBoxImage.Question);
-
-                    if (result == MessageBoxResult.Cancel) return;
-
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        bool didSave = SaveFile();
-                        if (!didSave) return;
-                    }
-                }
-            }
-
-            Documents.Clear();
-            CreateNewFile();
-        }
-
-        private bool _isFolderExplorerVisible;
-        public bool IsFolderExplorerVisible
-        {
-            get { return _isFolderExplorerVisible; }
-            set
-            {
-                _isFolderExplorerVisible = value;
-                OnPropertyChanged();
-            }
-        }
-
-
-        private void OpenFileFromTree(object param)
-        {
-            if (param is DirectoryItem node)
-            {
-                if (System.IO.Directory.Exists(node.FullPath)) return;
-
-                var existingTab = Documents.FirstOrDefault(d => d.FilePath == node.FullPath);
-                if (existingTab != null)
-                {
-                    SelectedDocument = existingTab;
-                    return;
-                }
-
-                try
-                {
-                    string content = System.IO.File.ReadAllText(node.FullPath);
-
-                    var newTab = new DocumentModel
-                    {
-                        FileName = node.Name,
-                        FilePath = node.FullPath,
-                        TextContent = content,
-                        IsModified = false
-                    };
-
-                    Documents.Add(newTab);
-                    SelectedDocument = newTab;
-                }
-                catch (System.Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"Error opening file: {ex.Message}");
-                }
-            }
-        }
-        private void NewFileInFolder(object param)
-        {
-            try
-            {
-                if (param is DirectoryItem folder && folder.IsDirectory)
-                {
-                    string newFileName = "NewFile.txt";
-                    string newFilePath = Path.Combine(folder.FullPath, newFileName);
-
-                    int counter = 1;
-                    while (File.Exists(newFilePath))
-                    {
-                        newFileName = $"NewFile ({counter}).txt";
-                        newFilePath = Path.Combine(folder.FullPath, newFileName);
-                        counter++;
-                    }
-
-                    File.WriteAllText(newFilePath, string.Empty);
-
-                    folder.Children.Clear();
-                    folder.Children.Add(new DirectoryItem { Name = "..." });
-                    folder.IsExpanded = false;
-                    folder.IsExpanded = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error creating file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-
-        private void CopyPath(object param)
-        {
-            if (param is DirectoryItem folder && folder.IsDirectory && !string.IsNullOrEmpty(folder.FullPath))
-            {
-                try
-                {
-                    Clipboard.SetDataObject(folder.FullPath, true);
-                }
-                catch (System.Runtime.InteropServices.COMException)
-                {
-                }
-                catch (System.Exception ex)
-                {
-                    MessageBox.Show($"Copy error: {ex.Message}", "Notepad", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void CopyFolder(object param)
-        {
-            try
-            {
-                if (param is DirectoryItem folder && folder.IsDirectory)
-                {
-                    _clipboardFolderPath = folder.FullPath;
-                    CommandManager.InvalidateRequerySuggested();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"A problem occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void PasteFolder(object param)
-        {
-            try
-            {
-                if (param is DirectoryItem destinationFolder && destinationFolder.IsDirectory)
-                {
-                    if (string.IsNullOrEmpty(_clipboardFolderPath) || !Directory.Exists(_clipboardFolderPath)) return;
-
-                    string sourceFolderName = new DirectoryInfo(_clipboardFolderPath).Name;
-                    string destFolderPath = Path.Combine(destinationFolder.FullPath, sourceFolderName);
-
-                    if (destFolderPath.StartsWith(_clipboardFolderPath, System.StringComparison.OrdinalIgnoreCase))
-                    {
-                        MessageBox.Show("Cannot copy a folder into itself or into one of its subfolders.", "Action Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning); return;
-                    }
-
-                    CopyDirectory(_clipboardFolderPath, destFolderPath);
-
-                    destinationFolder.Children.Clear();
-                    destinationFolder.Children.Add(new DirectoryItem { Name = "..." });
-                    destinationFolder.IsExpanded = false;
-                    destinationFolder.IsExpanded = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Paste error: {ex.Message}", "Paste Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void CopyDirectory(string sourceDir, string destinationDir)
-        {
-            try
-            {
-                DirectoryInfo dir = new DirectoryInfo(sourceDir);
-                if (!dir.Exists) return;
-
-                Directory.CreateDirectory(destinationDir);
-
-                try
-                {
-                    foreach (FileInfo file in dir.GetFiles())
-                    {
-                        string targetFilePath = Path.Combine(destinationDir, file.Name);
-                        file.CopyTo(targetFilePath, true);
-                    }
-                }
-                catch {}
-
-                try
-                {
-                    foreach (DirectoryInfo subDir in dir.GetDirectories())
-                    {
-                        string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-                        CopyDirectory(subDir.FullName, newDestinationDir);
-                    }
-                }
-                catch {}
-            }
-            catch
-            {
-            }
-        }
-
-        private void Find()
-        {
-            if (string.IsNullOrEmpty(SearchText)) return;
-
-            if (SearchAllTabs)
-            {
-                foreach (var doc in Documents)
-                {
-                    int index = doc.TextContent?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) ?? -1;
-                    if (index >= 0)
-                    {
-                        SelectedDocument = doc;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                if (SelectedDocument == null) return;
-                int index = SelectedDocument.TextContent?.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) ?? -1;
-                if (index < 0)
-                    MessageBox.Show($"\"{SearchText}\" not found.", "Find", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void Replace()
-        {
-            if (string.IsNullOrEmpty(SearchText)) return;
-
-            if (SearchAllTabs)
-            {
-                foreach (var doc in Documents)
-                {
-                    if (doc.TextContent != null && doc.TextContent.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        int index = doc.TextContent.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase);
-                        doc.TextContent = doc.TextContent.Remove(index, SearchText.Length).Insert(index, ReplaceText ?? "");
-                    }
-                }
-            }
-            else
-            {
-                if (SelectedDocument == null) return;
-                if (SelectedDocument.TextContent == null) return;
-
-                int idx = SelectedDocument.TextContent.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase);
-                if (idx >= 0)
-                    SelectedDocument.TextContent = SelectedDocument.TextContent.Remove(idx, SearchText.Length).Insert(idx, ReplaceText ?? "");
-                else
-                    MessageBox.Show($"\"{SearchText}\" not found.", "Replace", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
-
-        private void ReplaceAll()
-        {
-            if (string.IsNullOrEmpty(SearchText)) return;
-
-            if (SearchAllTabs)
-            {
-                foreach (var doc in Documents)
-                {
-                    if (doc.TextContent != null)
-                        doc.TextContent = doc.TextContent.Replace(SearchText, ReplaceText ?? "", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-            else
-            {
-                if (SelectedDocument == null) return;
-                if (SelectedDocument.TextContent == null) return;
-                SelectedDocument.TextContent = SelectedDocument.TextContent.Replace(SearchText, ReplaceText ?? "", StringComparison.OrdinalIgnoreCase);
-            }
-        }
-        private void Exit_Click(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
+            IsFolderExplorerVisible = false;
+            fileOps.CreateNewFile();
         }
     }
 }
