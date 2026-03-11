@@ -11,6 +11,10 @@ namespace Notepad.ViewModels
         private readonly Func<DocumentModel> _getSelected;
         private readonly Action<DocumentModel> _setSelected;
 
+        private int _lastFoundIndex = -1;
+        private string _lastSearchText = "";
+        private DocumentModel _lastSearchDoc = null;
+
         public SearchOperations(ObservableCollection<DocumentModel> documents,
                                 Func<DocumentModel> getSelected,
                                 Action<DocumentModel> setSelected)
@@ -41,6 +45,138 @@ namespace Notepad.ViewModels
                     MessageBox.Show($"\"{searchText}\" not found.", "Find", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
+
+        // La începutul clasei, adaugă:
+
+        public void FindNext(string searchText, bool allTabs)
+        {
+            if (string.IsNullOrEmpty(searchText)) return;
+
+            if (searchText != _lastSearchText || _getSelected() != _lastSearchDoc)
+            {
+                _lastFoundIndex = -1;
+                _lastSearchText = searchText;
+                _lastSearchDoc = _getSelected();
+            }
+
+            if (allTabs)
+            {
+                // cauta in toate tab-urile incepand de la pozitia curenta
+                var docs = _documents.ToList();
+                int docStart = _lastSearchDoc != null ? docs.IndexOf(_lastSearchDoc) : 0;
+
+                for (int i = 0; i < docs.Count; i++)
+                {
+                    int docIdx = (docStart + i) % docs.Count;
+                    var doc = docs[docIdx];
+                    int startPos = (i == 0) ? _lastFoundIndex + 1 : 0;
+                    if (doc.TextContent == null) continue;
+
+                    int idx = doc.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
+                    if (idx >= 0)
+                    {
+                        _setSelected(doc);
+                        _lastSearchDoc = doc;
+                        _lastFoundIndex = idx;
+                        SearchResultFound?.Invoke(idx, searchText.Length);
+                        return;
+                    }
+                }
+                MessageBox.Show($"\"{searchText}\" not found.", "Find Next", MessageBoxButton.OK, MessageBoxImage.Information);
+                _lastFoundIndex = -1;
+            }
+            else
+            {
+                var selected = _getSelected();
+                if (selected?.TextContent == null) return;
+
+                int startPos = _lastFoundIndex + 1;
+                if (startPos >= selected.TextContent.Length) startPos = 0;
+
+                int idx = selected.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0 && startPos > 0) // wrap around
+                    idx = selected.TextContent.IndexOf(searchText, 0, StringComparison.OrdinalIgnoreCase);
+
+                if (idx >= 0)
+                {
+                    _lastFoundIndex = idx;
+                    _lastSearchDoc = selected;
+                    SearchResultFound?.Invoke(idx, searchText.Length);
+                }
+                else
+                {
+                    MessageBox.Show($"\"{searchText}\" not found.", "Find Next", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _lastFoundIndex = -1;
+                }
+            }
+        }
+
+        public void FindPrevious(string searchText, bool allTabs)
+        {
+            if (string.IsNullOrEmpty(searchText)) return;
+
+            if (searchText != _lastSearchText || _getSelected() != _lastSearchDoc)
+            {
+                _lastFoundIndex = -1;
+                _lastSearchText = searchText;
+                _lastSearchDoc = _getSelected();
+            }
+
+            if (allTabs)
+            {
+                var docs = _documents.ToList();
+                int docStart = _lastSearchDoc != null ? docs.IndexOf(_lastSearchDoc) : 0;
+
+                for (int i = 0; i < docs.Count; i++)
+                {
+                    int docIdx = ((docStart - i) % docs.Count + docs.Count) % docs.Count;
+                    var doc = docs[docIdx];
+                    int searchUpTo = (i == 0 && _lastFoundIndex > 0) ? _lastFoundIndex - 1 : (doc.TextContent?.Length - 1 ?? 0);
+                    if (doc.TextContent == null || searchUpTo < 0) continue;
+
+                    int idx = doc.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase);
+                    if (idx >= 0)
+                    {
+                        _setSelected(doc);
+                        _lastSearchDoc = doc;
+                        _lastFoundIndex = idx;
+                        SearchResultFound?.Invoke(idx, searchText.Length);
+                        return;
+                    }
+                }
+                MessageBox.Show($"\"{searchText}\" not found.", "Find Previous", MessageBoxButton.OK, MessageBoxImage.Information);
+                _lastFoundIndex = -1;
+            }
+            else
+            {
+                var selected = _getSelected();
+                if (selected?.TextContent == null) return;
+
+                int searchUpTo = (_lastFoundIndex > 0) ? _lastFoundIndex - 1 : selected.TextContent.Length - 1;
+
+                int idx = searchUpTo >= 0
+                    ? selected.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase)
+                    : -1;
+
+                if (idx < 0 && _lastFoundIndex != selected.TextContent.Length - 1) // wrap around
+                    idx = selected.TextContent.LastIndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+
+                if (idx >= 0)
+                {
+                    _lastFoundIndex = idx;
+                    _lastSearchDoc = selected;
+                    SearchResultFound?.Invoke(idx, searchText.Length);
+                }
+                else
+                {
+                    MessageBox.Show($"\"{searchText}\" not found.", "Find Previous", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _lastFoundIndex = -1;
+                }
+            }
+        }
+
+        // Event pentru a comunica pozitia catre View
+        public event Action<int, int> SearchResultFound;
 
         public void Replace(string searchText, string replaceText, bool allTabs)
         {

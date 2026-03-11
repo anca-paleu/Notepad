@@ -72,6 +72,24 @@ namespace Notepad.ViewModels
         public ICommand ReplaceAllCommand { get; }
         public ICommand ExitCommand { get; }
         public ICommand AboutCommand { get; }
+        private string _lastSearchText = "";
+        public string LastSearchText
+        {
+            get => _lastSearchText;
+            set
+            {
+                _lastSearchText = value;
+                OnPropertyChanged();
+                CommandManager.InvalidateRequerySuggested(); // reactiveaza CanExecute
+            }
+        }
+
+
+        public event Action<int, int> ScrollToSearchResult;
+
+
+        public ICommand FindNextCommand { get; }
+        public ICommand FindPreviousCommand { get; }
 
         public MainViewModel()
         {
@@ -80,6 +98,9 @@ namespace Notepad.ViewModels
             var fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+
+            searchOps.SearchResultFound += (index, length) =>
+               ScrollToSearchResult?.Invoke(index, length);
 
             NewFileCommand = new RelayCommand(param => fileOps.CreateNewFile());
             CloseFileCommand = new RelayCommand(param => fileOps.CloseFile());
@@ -102,7 +123,23 @@ namespace Notepad.ViewModels
 
             var dialogService = new DialogService();
 
-            FindCommand = new RelayCommand(param => dialogService.ShowFind(text => searchOps.Find(text, SearchAllTabs)));
+            FindCommand = new RelayCommand(param =>
+    dialogService.ShowFind(text =>
+    {
+        if (!string.IsNullOrEmpty(text))
+            LastSearchText = text;
+        searchOps.Find(text, SearchAllTabs);
+    }));
+
+            // FindNext - activ doar daca LastSearchText nu e gol (CanExecute)
+            FindNextCommand = new RelayCommand(
+                param => searchOps.FindNext(LastSearchText, SearchAllTabs),
+                param => !string.IsNullOrEmpty(LastSearchText));
+
+            // FindPrevious - activ doar daca LastSearchText nu e gol (CanExecute)
+            FindPreviousCommand = new RelayCommand(
+                param => searchOps.FindPrevious(LastSearchText, SearchAllTabs),
+                param => !string.IsNullOrEmpty(LastSearchText));
 
             ReplaceCommand = new RelayCommand(param => dialogService.ShowReplace(
                 (s, r) => searchOps.Replace(s, r, SearchAllTabs)));

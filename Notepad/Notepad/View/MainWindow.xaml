@@ -44,7 +44,9 @@
                 <MenuItem Header="All tabs"      IsCheckable="True" IsChecked="{Binding SearchAllTabs}" />
                 <MenuItem Header="Selected tab"  IsCheckable="True" IsChecked="{Binding SearchAllTabs, Converter={StaticResource InverseBool}}" />
                 <Separator/>
-                <MenuItem Header="Find..." Command="{Binding FindCommand}" />
+                <MenuItem Header="Find..." Command="{Binding FindCommand}"/>
+                <MenuItem Header="Find Next" Command="{Binding FindNextCommand}"/>
+                <MenuItem Header="Find Previous" Command="{Binding FindPreviousCommand}"/>
                 <MenuItem Header="Replace..." Command="{Binding ReplaceCommand}" />
                 <MenuItem Header="Replace All..." Command="{Binding ReplaceAllCommand}" />
             </MenuItem>
@@ -142,9 +144,10 @@
                       Visibility="{Binding IsFolderExplorerVisible, Converter={StaticResource BoolToVis}}" 
                       ShowsPreview="True" />
 
-        <TabControl Grid.Row="2" Grid.Column="2" 
-                    ItemsSource="{Binding Documents}" 
-                    SelectedItem="{Binding SelectedDocument}">
+        <TabControl x:Name="MainTabControl"
+            Grid.Row="2" Grid.Column="2" 
+            ItemsSource="{Binding Documents}" 
+            SelectedItem="{Binding SelectedDocument}">
 
             <TabControl.ItemTemplate>
                 <DataTemplate>
