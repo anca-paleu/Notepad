@@ -40,6 +40,19 @@
                 <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
+            <MenuItem Header="Edit">
+                <MenuItem Header="Copy"  Command="{Binding CopyCommand}"  CommandParameter="{Binding ElementName=MainTabControl, Path=SelectedItem}" />
+                <MenuItem Header="Cut"   Command="{Binding CutCommand}"   CommandParameter="{Binding ElementName=MainTabControl, Path=SelectedItem}" />
+                <MenuItem Header="Paste"              Command="{Binding PasteCommand}" />
+                <Separator/>
+                <MenuItem Header="To Uppercase"       Command="{Binding ToUpperCaseCommand}" />
+                <MenuItem Header="To Lowercase"       Command="{Binding ToLowerCaseCommand}" />
+                <Separator/>
+                <MenuItem Header="Remove Empty Lines" Command="{Binding RemoveEmptyLinesCommand}" />
+                <MenuItem Header="Go To Line..."      Command="{Binding GoToLineCommand}" />
+                <Separator/>
+                <MenuItem Header="Set/Unset Readonly" Command="{Binding ToggleReadOnlyCommand}" />
+            </MenuItem>
             <MenuItem Header="Search">
                 <MenuItem Header="All tabs"      IsCheckable="True" IsChecked="{Binding SearchAllTabs}" />
                 <MenuItem Header="Selected tab"  IsCheckable="True" IsChecked="{Binding SearchAllTabs, Converter={StaticResource InverseBool}}" />
@@ -151,7 +164,19 @@
 
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding DisplayName}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                        <Button Content="✕" 
+                    Width="16" Height="16"
+                    Margin="5,0,0,0"
+                    Padding="0"
+                    FontSize="10"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Command="{Binding DataContext.CloseFileCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                    CommandParameter="{Binding}"/>
+                    </StackPanel>
                 </DataTemplate>
             </TabControl.ItemTemplate>
 
@@ -159,6 +184,7 @@
                 <DataTemplate>
                     <TextBox AcceptsReturn="True" 
                              TextWrapping="Wrap" 
+                             IsReadOnly="{Binding IsReadOnly}"
                              Text="{Binding TextContent, UpdateSourceTrigger=PropertyChanged}"
                              HorizontalAlignment="Stretch"
                              VerticalAlignment="Stretch"

@@ -60,5 +60,12 @@ namespace Notepad.Model
             }
         }
 
+        private bool _isReadOnly;
+        public bool IsReadOnly
+        {
+            get { return _isReadOnly; }
+            set { _isReadOnly = value; OnPropertyChanged(); }
+        }
+
     }
 }

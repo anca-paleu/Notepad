@@ -77,5 +77,29 @@ namespace Notepad.ViewModels
             win.Content = panel;
             win.ShowDialog();
         }
+
+        public void ShowGoToLine(Action<int> onGoTo)
+        {
+            var win = CreateDialog("Go To Line", 130);
+            var panel = new StackPanel { Margin = new Thickness(15) };
+            panel.Children.Add(CreateRow("Line number:", out var lineBox));
+
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center };
+            buttons.Children.Add(CreateButton("Go", 75, () =>
+            {
+                if (int.TryParse(lineBox.Text, out int line))
+                {
+                    onGoTo(line);
+                    win.Close();
+                }
+                else
+                    MessageBox.Show("Please enter a valid number.", "Go To Line", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }));
+            buttons.Children.Add(CreateButton("Cancel", 75, () => win.Close()));
+            panel.Children.Add(buttons);
+
+            win.Content = panel;
+            win.ShowDialog();
+        }
     }
 }

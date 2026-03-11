@@ -52,6 +52,18 @@ namespace Notepad.ViewModels
             set { _isFolderExplorerVisible = value; OnPropertyChanged(); }
         }
 
+        private string _lastSearchText = "";
+        public string LastSearchText
+        {
+            get => _lastSearchText;
+            set
+            {
+                _lastSearchText = value;
+                OnPropertyChanged();
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+
         public ObservableCollection<DirectoryItem> Directories { get; set; }
 
         public ICommand NewFileCommand { get; }
@@ -68,28 +80,25 @@ namespace Notepad.ViewModels
         public ICommand CopyFolderCommand { get; }
         public ICommand PasteFolderCommand { get; }
         public ICommand FindCommand { get; }
+        public ICommand FindNextCommand { get; }
+        public ICommand FindPreviousCommand { get; }
         public ICommand ReplaceCommand { get; }
         public ICommand ReplaceAllCommand { get; }
         public ICommand ExitCommand { get; }
         public ICommand AboutCommand { get; }
-        private string _lastSearchText = "";
-        public string LastSearchText
-        {
-            get => _lastSearchText;
-            set
-            {
-                _lastSearchText = value;
-                OnPropertyChanged();
-                CommandManager.InvalidateRequerySuggested();
-            }
-        }
-
+        public ICommand CopyCommand { get; }
+        public ICommand CutCommand { get; }
+        public ICommand PasteCommand { get; }
+        public ICommand ToUpperCaseCommand { get; }
+        public ICommand ToLowerCaseCommand { get; }
+        public ICommand RemoveEmptyLinesCommand { get; }
+        public ICommand GoToLineCommand { get; }
+        public ICommand ToggleReadOnlyCommand { get; }
 
         public event Action<int, int> ScrollToSearchResult;
-
-
-        public ICommand FindNextCommand { get; }
-        public ICommand FindPreviousCommand { get; }
+        public event Action<int> ScrollToLine;
+        public Func<string> RequestSelectedText { get; set; }
+        public Func<int> RequestSelectionStart { get; set; }
 
         public MainViewModel()
         {
@@ -98,12 +107,27 @@ namespace Notepad.ViewModels
             var fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
-
-            searchOps.SearchResultFound += (index, length) =>
-               ScrollToSearchResult?.Invoke(index, length);
+            var textOps = new TextOperations(
+                () => SelectedDocument,
+                () => RequestSelectedText?.Invoke() ?? "",
+                () => RequestSelectionStart?.Invoke() ?? -1);
+            searchOps.SearchResultFound += (index, length) => ScrollToSearchResult?.Invoke(index, length);
+            textOps.ScrollToLine += charIndex => ScrollToLine?.Invoke(charIndex);
 
             NewFileCommand = new RelayCommand(param => fileOps.CreateNewFile());
-            CloseFileCommand = new RelayCommand(param => fileOps.CloseFile());
+            CloseFileCommand = new RelayCommand(param =>
+            {
+                if (param is DocumentModel doc)
+                {
+                    var prev = SelectedDocument;
+                    SelectedDocument = doc;
+                    fileOps.CloseFile();
+                    if (prev != doc && Documents.Contains(prev))
+                        SelectedDocument = prev;
+                }
+                else
+                    fileOps.CloseFile();
+            });
             CloseAllFilesCommand = new RelayCommand(param => fileOps.CloseAllFiles());
             SaveCommand = new RelayCommand(param => fileOps.SaveFile());
             SaveAsCommand = new RelayCommand(param => fileOps.SaveFileAs());
@@ -123,13 +147,12 @@ namespace Notepad.ViewModels
 
             var dialogService = new DialogService();
 
-            FindCommand = new RelayCommand(param =>
-    dialogService.ShowFind(text =>
-    {
-        if (!string.IsNullOrEmpty(text))
-            LastSearchText = text;
-        searchOps.Find(text, SearchAllTabs);
-    }));
+            FindCommand = new RelayCommand(param => dialogService.ShowFind(text =>
+            {
+                if (!string.IsNullOrEmpty(text))
+                    LastSearchText = text;
+                searchOps.Find(text, SearchAllTabs);
+            }));
 
             FindNextCommand = new RelayCommand(
                 param => searchOps.FindNext(LastSearchText, SearchAllTabs),
@@ -146,6 +169,16 @@ namespace Notepad.ViewModels
                 (s, r) => searchOps.ReplaceAll(s, r, SearchAllTabs)));
 
             AboutCommand = new RelayCommand(param => dialogService.ShowAbout());
+
+            CopyCommand = new RelayCommand(param => textOps.Copy(), param => !string.IsNullOrEmpty(RequestSelectedText?.Invoke()));
+            CutCommand = new RelayCommand(param => textOps.Cut(), param => !string.IsNullOrEmpty(RequestSelectedText?.Invoke()));
+            PasteCommand = new RelayCommand(param => textOps.Paste(), param => textOps.HasInternalClipboard);
+
+            ToUpperCaseCommand = new RelayCommand(param => textOps.ToUpperCase());
+            ToLowerCaseCommand = new RelayCommand(param => textOps.ToLowerCase());
+            RemoveEmptyLinesCommand = new RelayCommand(param => textOps.RemoveEmptyLines());
+            ToggleReadOnlyCommand = new RelayCommand(param => textOps.ToggleReadOnly());
+            GoToLineCommand = new RelayCommand(param => dialogService.ShowGoToLine(line => textOps.GoToLine(line)));
 
             Directories = new ObservableCollection<DirectoryItem>();
             foreach (var drive in Directory.GetLogicalDrives())
