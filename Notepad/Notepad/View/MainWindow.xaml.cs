@@ -12,6 +12,7 @@ namespace Notepad
         public MainWindow()
         {
             InitializeComponent();
+            this.Closing += OnWindowClosing;
             this.Loaded += (s, e) =>
             {
                 var vm = DataContext as MainViewModel;
@@ -50,6 +51,14 @@ namespace Notepad
                 vm.RequestSelectedText = () => FindActiveTextBox()?.SelectedText ?? "";
                 vm.RequestSelectionStart = () => FindActiveTextBox()?.SelectionStart ?? -1;
             };
+        }
+
+        private void OnWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var vm = DataContext as MainViewModel;
+            if (vm == null) return;
+            if (!vm.CanClose())
+                e.Cancel = true;
         }
 
         private TextBox FindActiveTextBox()

@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
-using Microsoft.Win32;
 using Notepad.Model;
 using Notepad.ViewModel;
-using Notepad.ViewModels;
 
 namespace Notepad.ViewModels
 {
     public class MainViewModel : ObservableObject
     {
         private DocumentModel _selectedDocument;
+        private FileOperations _fileOps;
+        private SearchOperations _searchOps;
+        private bool _closeConfirmed = false;
+
         public ObservableCollection<DocumentModel> Documents { get; set; }
 
         public DocumentModel SelectedDocument
@@ -104,34 +103,37 @@ namespace Notepad.ViewModels
         {
             Documents = new ObservableCollection<DocumentModel>();
 
-            var fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
-            var searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+            _fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+            _searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var textOps = new TextOperations(
                 () => SelectedDocument,
                 () => RequestSelectedText?.Invoke() ?? "",
                 () => RequestSelectionStart?.Invoke() ?? -1);
-            searchOps.SearchResultFound += (index, length) => ScrollToSearchResult?.Invoke(index, length);
+
+            _searchOps.SearchResultFound += (index, length) => ScrollToSearchResult?.Invoke(index, length);
             textOps.ScrollToLine += charIndex => ScrollToLine?.Invoke(charIndex);
 
-            NewFileCommand = new RelayCommand(param => fileOps.CreateNewFile());
+            NewFileCommand = new RelayCommand(param => _fileOps.CreateNewFile());
+
             CloseFileCommand = new RelayCommand(param =>
             {
                 if (param is DocumentModel doc)
                 {
                     var prev = SelectedDocument;
                     SelectedDocument = doc;
-                    fileOps.CloseFile();
+                    _fileOps.CloseFile();
                     if (prev != doc && Documents.Contains(prev))
                         SelectedDocument = prev;
                 }
                 else
-                    fileOps.CloseFile();
+                    _fileOps.CloseFile();
             });
-            CloseAllFilesCommand = new RelayCommand(param => fileOps.CloseAllFiles());
-            SaveCommand = new RelayCommand(param => fileOps.SaveFile());
-            SaveAsCommand = new RelayCommand(param => fileOps.SaveFileAs());
-            OpenFileCommand = new RelayCommand(param => fileOps.OpenFile());
+
+            CloseAllFilesCommand = new RelayCommand(param => _fileOps.CloseAllFiles());
+            SaveCommand = new RelayCommand(param => _fileOps.SaveFile());
+            SaveAsCommand = new RelayCommand(param => _fileOps.SaveFileAs());
+            OpenFileCommand = new RelayCommand(param => _fileOps.OpenFile());
 
             OpenFileFromTreeCommand = new RelayCommand(dirOps.OpenFileFromTree);
             NewFileInFolderCommand = new RelayCommand(dirOps.NewFileInFolder);
@@ -143,7 +145,14 @@ namespace Notepad.ViewModels
             ViewStandardCommand = new RelayCommand(param => IsFolderExplorerVisible = false);
             ViewFolderExplorerCommand = new RelayCommand(param => IsFolderExplorerVisible = true);
 
-            ExitCommand = new RelayCommand(param => Application.Current.Shutdown());
+            ExitCommand = new RelayCommand(param =>
+            {
+                if (_fileOps.ConfirmAndSaveAll())
+                {
+                    _closeConfirmed = true;
+                    Application.Current.Shutdown();
+                }
+            });
 
             var dialogService = new DialogService();
 
@@ -151,22 +160,22 @@ namespace Notepad.ViewModels
             {
                 if (!string.IsNullOrEmpty(text))
                     LastSearchText = text;
-                searchOps.Find(text, SearchAllTabs);
+                _searchOps.Find(text, SearchAllTabs);
             }));
 
             FindNextCommand = new RelayCommand(
-                param => searchOps.FindNext(LastSearchText, SearchAllTabs),
+                param => _searchOps.FindNext(LastSearchText, SearchAllTabs),
                 param => !string.IsNullOrEmpty(LastSearchText));
 
             FindPreviousCommand = new RelayCommand(
-                param => searchOps.FindPrevious(LastSearchText, SearchAllTabs),
+                param => _searchOps.FindPrevious(LastSearchText, SearchAllTabs),
                 param => !string.IsNullOrEmpty(LastSearchText));
 
             ReplaceCommand = new RelayCommand(param => dialogService.ShowReplace(
-                (s, r) => searchOps.Replace(s, r, SearchAllTabs)));
+                (s, r) => _searchOps.Replace(s, r, SearchAllTabs)));
 
             ReplaceAllCommand = new RelayCommand(param => dialogService.ShowReplace(
-                (s, r) => searchOps.ReplaceAll(s, r, SearchAllTabs)));
+                (s, r) => _searchOps.ReplaceAll(s, r, SearchAllTabs)));
 
             AboutCommand = new RelayCommand(param => dialogService.ShowAbout());
 
@@ -189,7 +198,13 @@ namespace Notepad.ViewModels
             }
 
             IsFolderExplorerVisible = false;
-            fileOps.CreateNewFile();
+            _fileOps.CreateNewFile();
+        }
+
+        public bool CanClose()
+        {
+            if (_closeConfirmed) return true;
+            return _fileOps.ConfirmAndSaveAll();
         }
     }
 }

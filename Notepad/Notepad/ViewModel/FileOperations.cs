@@ -132,21 +132,30 @@ namespace Notepad.ViewModels
 
         public void CloseAllFiles()
         {
+            if (!ConfirmAndSaveAll()) return;
+            _documents.Clear();
+            CreateNewFile();
+        }
+
+        public bool ConfirmAndSaveAll()
+        {
             foreach (var doc in _documents.ToList())
             {
                 if (doc.IsModified)
                 {
-                    var result = MessageBox.Show(
+                    MessageBoxResult result = MessageBox.Show(
                         $"Save file \"{doc.FileName}\"?",
-                        "Notepad", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                        "Notepad",
+                        MessageBoxButton.YesNoCancel,
+                        MessageBoxImage.Question);
 
-                    if (result == MessageBoxResult.Cancel) return;
+                    if (result == MessageBoxResult.Cancel) return false;
 
                     if (result == MessageBoxResult.Yes)
                     {
                         if (string.IsNullOrEmpty(doc.FilePath))
                         {
-                            var dialog = new SaveFileDialog();
+                            SaveFileDialog dialog = new SaveFileDialog();
                             dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
                             dialog.FileName = doc.FileName;
 
@@ -157,7 +166,7 @@ namespace Notepad.ViewModels
                                 File.WriteAllText(doc.FilePath, doc.TextContent);
                                 doc.IsModified = false;
                             }
-                            else return;
+                            else return false;
                         }
                         else
                         {
@@ -167,9 +176,7 @@ namespace Notepad.ViewModels
                     }
                 }
             }
-
-            _documents.Clear();
-            CreateNewFile();
+            return true;
         }
     }
 }
