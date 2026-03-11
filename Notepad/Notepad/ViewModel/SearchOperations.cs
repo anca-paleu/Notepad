@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using Notepad.Model;
+using System.Linq;
 
 namespace Notepad.ViewModels
 {
@@ -33,7 +34,14 @@ namespace Notepad.ViewModels
                 foreach (var doc in _documents)
                 {
                     int index = doc.TextContent?.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) ?? -1;
-                    if (index >= 0) { _setSelected(doc); break; }
+                    if (index >= 0)
+                    {
+                        _setSelected(doc);
+                        _lastSearchDoc = doc;
+                        _lastFoundIndex = index;
+                        SearchResultFound?.Invoke(index, searchText.Length);
+                        break;
+                    }
                 }
             }
             else
@@ -41,12 +49,18 @@ namespace Notepad.ViewModels
                 var selected = _getSelected();
                 if (selected == null) return;
                 int index = selected.TextContent?.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) ?? -1;
-                if (index < 0)
+                if (index >= 0)
+                {
+                    _lastSearchDoc = selected;
+                    _lastFoundIndex = index;
+                    SearchResultFound?.Invoke(index, searchText.Length); //
+                }
+                else
+                {
                     MessageBox.Show($"\"{searchText}\" not found.", "Find", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
         }
-
-        // La începutul clasei, adaugă:
 
         public void FindNext(string searchText, bool allTabs)
         {
@@ -61,7 +75,6 @@ namespace Notepad.ViewModels
 
             if (allTabs)
             {
-                // cauta in toate tab-urile incepand de la pozitia curenta
                 var docs = _documents.ToList();
                 int docStart = _lastSearchDoc != null ? docs.IndexOf(_lastSearchDoc) : 0;
 
@@ -94,7 +107,7 @@ namespace Notepad.ViewModels
                 if (startPos >= selected.TextContent.Length) startPos = 0;
 
                 int idx = selected.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
-                if (idx < 0 && startPos > 0) // wrap around
+                if (idx < 0 && startPos > 0) 
                     idx = selected.TextContent.IndexOf(searchText, 0, StringComparison.OrdinalIgnoreCase);
 
                 if (idx >= 0)
@@ -158,7 +171,7 @@ namespace Notepad.ViewModels
                     ? selected.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase)
                     : -1;
 
-                if (idx < 0 && _lastFoundIndex != selected.TextContent.Length - 1) // wrap around
+                if (idx < 0 && _lastFoundIndex != selected.TextContent.Length - 1) 
                     idx = selected.TextContent.LastIndexOf(searchText, StringComparison.OrdinalIgnoreCase);
 
                 if (idx >= 0)
@@ -175,7 +188,6 @@ namespace Notepad.ViewModels
             }
         }
 
-        // Event pentru a comunica pozitia catre View
         public event Action<int, int> SearchResultFound;
 
         public void Replace(string searchText, string replaceText, bool allTabs)

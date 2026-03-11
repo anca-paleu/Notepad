@@ -80,7 +80,7 @@ namespace Notepad.ViewModels
             {
                 _lastSearchText = value;
                 OnPropertyChanged();
-                CommandManager.InvalidateRequerySuggested(); // reactiveaza CanExecute
+                CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -131,12 +131,10 @@ namespace Notepad.ViewModels
         searchOps.Find(text, SearchAllTabs);
     }));
 
-            // FindNext - activ doar daca LastSearchText nu e gol (CanExecute)
             FindNextCommand = new RelayCommand(
                 param => searchOps.FindNext(LastSearchText, SearchAllTabs),
                 param => !string.IsNullOrEmpty(LastSearchText));
 
-            // FindPrevious - activ doar daca LastSearchText nu e gol (CanExecute)
             FindPreviousCommand = new RelayCommand(
                 param => searchOps.FindPrevious(LastSearchText, SearchAllTabs),
                 param => !string.IsNullOrEmpty(LastSearchText));

@@ -1,6 +1,8 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Notepad.ViewModels;
 
 namespace Notepad
@@ -10,29 +12,36 @@ namespace Notepad
         public MainWindow()
         {
             InitializeComponent();
-            var vm = (MainViewModel)DataContext;
 
-            vm.ScrollToSearchResult += (index, length) =>
+            this.Loaded += (s, e) =>
             {
-                var textBox = FindActiveTextBox();
-                if (textBox == null) return;
+                var vm = DataContext as MainViewModel;
+                if (vm == null) return;
 
-                textBox.Focus();
-                textBox.CaretIndex = index;
-                textBox.Select(index, length);
+                vm.ScrollToSearchResult += (index, length) =>
+                {
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        var textBox = FindActiveTextBox();
+                        if (textBox == null) return;
 
-                int lineIndex = textBox.GetLineIndexFromCharacterIndex(index);
-                if (lineIndex >= 0)
-                    textBox.ScrollToLine(lineIndex);
+                        textBox.Focus();
+
+                        textBox.CaretIndex = index;
+                        textBox.Select(index, length);
+
+                        int lineIndex = textBox.GetLineIndexFromCharacterIndex(index);
+                        if (lineIndex >= 0)
+                            textBox.ScrollToLine(lineIndex);
+
+                    }), DispatcherPriority.Background);
+                };
             };
         }
 
         private TextBox FindActiveTextBox()
         {
-            // Cauta TextBox-ul doar in continutul tab-ului activ
-            // MainTabControl e numele pe care l-am adaugat in XAML
-            var selectedContent = MainTabControl.SelectedContent as DependencyObject;
-            return FindChild<TextBox>(selectedContent);
+            return FindChild<TextBox>(MainTabControl);
         }
 
         private static T FindChild<T>(DependencyObject parent) where T : DependencyObject
