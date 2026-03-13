@@ -87,14 +87,18 @@
                 <Button Content="Open" Command="{Binding OpenFileCommand}" />
                 <Button Content="Close" Command="{Binding CloseFileCommand}" />
                 <Button Content="Save" Command="{Binding SaveCommand}" />
-                <TextBlock Text="Search:" VerticalAlignment="Center" Margin="5,0"/>
-                <TextBox Width="150" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="3,0"/>
-                <TextBlock Text="Replace:" VerticalAlignment="Center" Margin="5,0"/>
-                <TextBox Width="150" Text="{Binding ReplaceText, UpdateSourceTrigger=PropertyChanged}" Margin="3,0"/>
+
+                <Separator Margin="5,0" />
+
                 <CheckBox Content="All tabs" IsChecked="{Binding SearchAllTabs}" VerticalAlignment="Center" Margin="5,0"/>
-                <Button Content="Find"        Command="{Binding FindCommand}"       Margin="3,0"/>
-                <Button Content="Replace"     Command="{Binding ReplaceCommand}"    Margin="3,0"/>
-                <Button Content="Replace All" Command="{Binding ReplaceAllCommand}" Margin="3,0"/>
+
+                <Separator Margin="5,0" />
+
+                <Button Content="Find Previous" Command="{Binding FindPreviousCommand}" Margin="3,0"/>
+                <Button Content="Find"       Command="{Binding FindCommand}"         Margin="3,0"/>
+                <Button Content="Find Next"     Command="{Binding FindNextCommand}"     Margin="3,0"/>
+                <Button Content="Replace"    Command="{Binding ReplaceCommand}"      Margin="3,0"/>
+                <Button Content="Replace All" Command="{Binding ReplaceAllCommand}"   Margin="3,0"/>
             </ToolBar>
         </ToolBarTray>
 

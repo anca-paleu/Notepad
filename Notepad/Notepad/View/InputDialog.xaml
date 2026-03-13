@@ -1,0 +1,12 @@
+﻿<Window x:Class="Notepad.View.InputDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Input" Height="150" Width="350"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="15">
+        <TextBlock x:Name="lblPrompt" Text="Enter file name:" Margin="0,0,0,10" />
+        <TextBox x:Name="txtInput" Margin="0,0,0,15" VerticalAlignment="Center" />
+
+        <Button Content="OK" Width="75" HorizontalAlignment="Center" Click="BtnOK_Click" IsDefault="True" />
+    </StackPanel>
+</Window>

@@ -103,9 +103,11 @@ namespace Notepad.ViewModels
         {
             Documents = new ObservableCollection<DocumentModel>();
 
-            _fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+            var dialogService = new DialogService();
+
+            _fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d, dialogService);
             _searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
-            var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
+            var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d, dialogService);
             var textOps = new TextOperations(
                 () => SelectedDocument,
                 () => RequestSelectedText?.Invoke() ?? "",
@@ -154,8 +156,6 @@ namespace Notepad.ViewModels
                 }
             });
 
-            var dialogService = new DialogService();
-
             FindCommand = new RelayCommand(param => dialogService.ShowFind(text =>
             {
                 if (!string.IsNullOrEmpty(text))
@@ -189,13 +189,7 @@ namespace Notepad.ViewModels
             ToggleReadOnlyCommand = new RelayCommand(param => textOps.ToggleReadOnly());
             GoToLineCommand = new RelayCommand(param => dialogService.ShowGoToLine(line => textOps.GoToLine(line)));
 
-            Directories = new ObservableCollection<DirectoryItem>();
-            foreach (var drive in Directory.GetLogicalDrives())
-            {
-                var driveItem = new DirectoryItem { Name = drive, FullPath = drive, IsDirectory = true };
-                driveItem.Children.Add(new DirectoryItem { Name = "..." });
-                Directories.Add(driveItem);
-            }
+            Directories = dirOps.GetLogicalDrives();
 
             IsFolderExplorerVisible = false;
             _fileOps.CreateNewFile();

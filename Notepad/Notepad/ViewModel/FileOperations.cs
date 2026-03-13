@@ -1,7 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
-using System.Windows;
-using Microsoft.Win32;
 using Notepad.Model;
 using System.Collections.ObjectModel;
 
@@ -10,27 +9,33 @@ namespace Notepad.ViewModels
     public class FileOperations
     {
         private readonly ObservableCollection<DocumentModel> _documents;
-        private readonly System.Action<DocumentModel> _setSelected;
-        private readonly System.Func<DocumentModel> _getSelected;
-
+        private readonly Action<DocumentModel> _setSelected;
+        private readonly Func<DocumentModel> _getSelected;
+        private readonly DialogService _dialogService;
+        private const string DefaultNewFileName = "new";
         public FileOperations(ObservableCollection<DocumentModel> documents,
-                              System.Func<DocumentModel> getSelected,
-                              System.Action<DocumentModel> setSelected)
+                              Func<DocumentModel> getSelected,
+                              Action<DocumentModel> setSelected,
+                              DialogService dialogService) 
         {
             _documents = documents;
             _getSelected = getSelected;
             _setSelected = setSelected;
+            _dialogService = dialogService;
         }
 
         public void CreateNewFile()
         {
             int number = 1;
-            while (_documents.Any(d => d.FileName == $"new {number}" || d.FileName == $"new {number}*"))
+            while (_documents.Any(d => d.FileName == $"{DefaultNewFileName} {number}" ||
+                                       d.FileName == $"{DefaultNewFileName} {number}*"))
+            {
                 number++;
+            }
 
             var newTab = new DocumentModel
             {
-                FileName = $"new {number}",
+                FileName = $"{DefaultNewFileName} {number}",
                 TextContent = "",
                 IsModified = false
             };
@@ -47,9 +52,17 @@ namespace Notepad.ViewModels
             if (string.IsNullOrEmpty(selected.FilePath))
                 return SaveFileAs();
 
-            File.WriteAllText(selected.FilePath, selected.TextContent);
-            selected.IsModified = false;
-            return true;
+            try
+            {
+                File.WriteAllText(selected.FilePath, selected.TextContent);
+                selected.IsModified = false;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowError($"Could not save the file.\nError: {ex.Message}", "Save Error");
+                return false;
+            }
         }
 
         public bool SaveFileAs()
@@ -57,17 +70,24 @@ namespace Notepad.ViewModels
             var selected = _getSelected();
             if (selected == null) return false;
 
-            var dialog = new SaveFileDialog();
-            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-            dialog.FileName = selected.FileName;
+            string filePath = _dialogService.ShowSaveFileDialog(selected.FileName);
 
-            if (dialog.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(filePath))
             {
-                selected.FilePath = dialog.FileName;
-                selected.FileName = Path.GetFileName(dialog.FileName);
-                File.WriteAllText(selected.FilePath, selected.TextContent);
-                selected.IsModified = false;
-                return true;
+                try
+                {
+                    File.WriteAllText(filePath, selected.TextContent);
+
+                    selected.FilePath = filePath;
+                    selected.FileName = Path.GetFileName(filePath);
+                    selected.IsModified = false;
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _dialogService.ShowError($"Could not save the file as '{filePath}'.\nError: {ex.Message}", "Save As Error");
+                    return false;
+                }
             }
 
             return false;
@@ -75,31 +95,37 @@ namespace Notepad.ViewModels
 
         public void OpenFile()
         {
-            var dialog = new OpenFileDialog();
-            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
+            string filePath = _dialogService.ShowOpenFileDialog();
 
-            if (dialog.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(filePath))
             {
                 foreach (var doc in _documents)
                 {
-                    if (doc.FilePath == dialog.FileName)
+                    if (doc.FilePath == filePath)
                     {
                         _setSelected(doc);
                         return;
                     }
                 }
 
-                string text = File.ReadAllText(dialog.FileName);
-                var opened = new DocumentModel
+                try
                 {
-                    FilePath = dialog.FileName,
-                    FileName = Path.GetFileName(dialog.FileName),
-                    TextContent = text,
-                    IsModified = false
-                };
+                    string text = File.ReadAllText(filePath);
+                    var opened = new DocumentModel
+                    {
+                        FilePath = filePath,
+                        FileName = Path.GetFileName(filePath),
+                        TextContent = text,
+                        IsModified = false
+                    };
 
-                _documents.Add(opened);
-                _setSelected(opened);
+                    _documents.Add(opened);
+                    _setSelected(opened);
+                }
+                catch (Exception ex)
+                {
+                    _dialogService.ShowError($"Could not open the file.\nError: {ex.Message}", "Open Error");
+                }
             }
         }
 
@@ -110,12 +136,10 @@ namespace Notepad.ViewModels
 
             if (selected.IsModified)
             {
-                var result = MessageBox.Show(
-                    $"Save file \"{selected.FileName}\"?",
-                    "Notepad", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                bool? shouldSave = _dialogService.AskToSave(selected.FileName);
 
-                if (result == MessageBoxResult.Cancel) return;
-                if (result == MessageBoxResult.Yes)
+                if (shouldSave == null) return; 
+                if (shouldSave == true)
                 {
                     bool didSave = SaveFile();
                     if (!didSave) return;
@@ -143,35 +167,36 @@ namespace Notepad.ViewModels
             {
                 if (doc.IsModified)
                 {
-                    MessageBoxResult result = MessageBox.Show(
-                        $"Save file \"{doc.FileName}\"?",
-                        "Notepad",
-                        MessageBoxButton.YesNoCancel,
-                        MessageBoxImage.Question);
+                    bool? shouldSave = _dialogService.AskToSave(doc.FileName);
 
-                    if (result == MessageBoxResult.Cancel) return false;
+                    if (shouldSave == null) return false;
 
-                    if (result == MessageBoxResult.Yes)
+                    if (shouldSave == true)
                     {
-                        if (string.IsNullOrEmpty(doc.FilePath))
+                        try
                         {
-                            SaveFileDialog dialog = new SaveFileDialog();
-                            dialog.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-                            dialog.FileName = doc.FileName;
-
-                            if (dialog.ShowDialog() == true)
+                            if (string.IsNullOrEmpty(doc.FilePath))
                             {
-                                doc.FilePath = dialog.FileName;
-                                doc.FileName = Path.GetFileName(dialog.FileName);
+                                string filePath = _dialogService.ShowSaveFileDialog(doc.FileName);
+                                if (!string.IsNullOrEmpty(filePath))
+                                {
+                                    File.WriteAllText(filePath, doc.TextContent);
+                                    doc.FilePath = filePath;
+                                    doc.FileName = Path.GetFileName(filePath);
+                                    doc.IsModified = false;
+                                }
+                                else return false;
+                            }
+                            else
+                            {
                                 File.WriteAllText(doc.FilePath, doc.TextContent);
                                 doc.IsModified = false;
                             }
-                            else return false;
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            File.WriteAllText(doc.FilePath, doc.TextContent);
-                            doc.IsModified = false;
+                            _dialogService.ShowError($"Could not save the file '{doc.FileName}'.\nError: {ex.Message}", "Save Error");
+                            return false;
                         }
                     }
                 }

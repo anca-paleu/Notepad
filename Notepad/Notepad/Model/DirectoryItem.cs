@@ -1,7 +1,5 @@
-﻿using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.IO;
-using System.Runtime.CompilerServices;
+﻿using System;
+using System.Collections.ObjectModel;
 using Notepad.ViewModel;
 
 namespace Notepad.Model
@@ -10,12 +8,13 @@ namespace Notepad.Model
     {
         public string Name { get; set; }
         public string FullPath { get; set; }
-
         public bool IsDirectory { get; set; }
-
         public ObservableCollection<DirectoryItem> Children { get; set; }
 
         private bool _isExpanded;
+
+        private readonly Action<DirectoryItem> _loadChildrenAction;
+
         public bool IsExpanded
         {
             get { return _isExpanded; }
@@ -24,56 +23,17 @@ namespace Notepad.Model
                 _isExpanded = value;
                 OnPropertyChanged();
 
-                if (_isExpanded)
+                if (_isExpanded && _loadChildrenAction != null)
                 {
-                    LoadChildren();
+                    _loadChildrenAction(this);
                 }
             }
         }
 
-        public DirectoryItem()
+        public DirectoryItem(Action<DirectoryItem> loadChildrenAction = null)
         {
             Children = new ObservableCollection<DirectoryItem>();
+            _loadChildrenAction = loadChildrenAction;
         }
-
-        private void LoadChildren()
-        {
-            if (Children.Count == 1 && Children[0].Name == "...")
-            {
-                Children.Clear();
-
-                try
-                {
-                    foreach (var dir in Directory.GetDirectories(FullPath))
-                    {
-                        var subDir = new DirectoryItem
-                        {
-                            Name = new DirectoryInfo(dir).Name,
-                            FullPath = dir,
-                            IsDirectory = true
-                        };
-                        subDir.Children.Add(new DirectoryItem { Name = "..." });
-                        Children.Add(subDir);
-                    }
-
-                    foreach (var file in Directory.GetFiles(FullPath))
-                    {
-                        Children.Add(new DirectoryItem
-                        {
-                            Name = Path.GetFileName(file),
-                            FullPath = file,
-                            IsDirectory = false
-                        });
-                    }
-                }
-                catch
-                {
-                    { }
-                }
-
-            }
-        }
-
-
     }
 }

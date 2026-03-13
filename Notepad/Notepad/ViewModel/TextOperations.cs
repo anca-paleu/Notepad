@@ -40,21 +40,29 @@ namespace Notepad.ViewModels
         {
             var doc = _getSelected();
             if (doc?.TextContent == null) return;
-            var lines = doc.TextContent.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l));
-            doc.TextContent = string.Join("\n", lines);
+
+            var lines = doc.TextContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
+                                       .Where(l => !string.IsNullOrWhiteSpace(l));
+
+            doc.TextContent = string.Join(Environment.NewLine, lines);
         }
 
         public void GoToLine(int lineNumber)
         {
             var doc = _getSelected();
             if (doc?.TextContent == null) return;
-            var lines = doc.TextContent.Split('\n');
+
+            var lines = doc.TextContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+
             if (lineNumber < 1 || lineNumber > lines.Length)
             {
                 MessageBox.Show($"Line {lineNumber} does not exist.", "Go To Line", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            int charIndex = lines.Take(lineNumber - 1).Sum(l => l.Length + 1);
+
+            int newLineLength = Environment.NewLine.Length;
+            int charIndex = lines.Take(lineNumber - 1).Sum(l => l.Length + newLineLength);
+
             ScrollToLine?.Invoke(charIndex);
         }
 

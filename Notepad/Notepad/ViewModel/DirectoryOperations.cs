@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Windows;
-using System.Windows.Input;
 using Notepad.Model;
 using System.Collections.ObjectModel;
 
@@ -12,15 +11,61 @@ namespace Notepad.ViewModels
         private readonly ObservableCollection<DocumentModel> _documents;
         private readonly Action<DocumentModel> _setSelected;
         private readonly Func<DocumentModel> _getSelected;
+        private readonly DialogService _dialogService; 
+
         public string ClipboardFolderPath { get; private set; }
 
         public DirectoryOperations(ObservableCollection<DocumentModel> documents,
                                    Func<DocumentModel> getSelected,
-                                   Action<DocumentModel> setSelected)
+                                   Action<DocumentModel> setSelected,
+                                   DialogService dialogService)
         {
             _documents = documents;
             _getSelected = getSelected;
             _setSelected = setSelected;
+            _dialogService = dialogService;
+        }
+
+        public void NewFileInFolder(object param)
+        {
+            try
+            {
+                if (param is DirectoryItem folder && folder.IsDirectory)
+                {
+                    string baseName = "NewFile";
+                    string extension = ".txt";
+                    string defaultName = baseName + extension;
+
+                    string checkPath = Path.Combine(folder.FullPath, defaultName);
+                    int counter = 1;
+
+                    while (File.Exists(checkPath))
+                    {
+                        defaultName = $"{baseName} ({counter}){extension}";
+                        checkPath = Path.Combine(folder.FullPath, defaultName);
+                        counter++;
+                    }
+
+                    string fileName = _dialogService.ShowInput("New File", "Enter file name with extension:", defaultName);
+
+                    if (string.IsNullOrWhiteSpace(fileName)) return;
+
+                    string newFilePath = Path.Combine(folder.FullPath, fileName);
+
+                    if (File.Exists(newFilePath))
+                    {
+                        _dialogService.ShowWarning($"A file named '{fileName}' already exists in this folder.", "File Exists");
+                        return;
+                    }
+
+                    File.WriteAllText(newFilePath, string.Empty);
+                    RefreshFolder(folder);
+                }
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowError($"Failed to create a new file.\nError: {ex.Message}", "Create File Error");
+            }
         }
 
         public void OpenFileFromTree(object param)
@@ -49,35 +94,8 @@ namespace Notepad.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error opening file: {ex.Message}");
+                    _dialogService.ShowError($"Could not open the file '{node.Name}'.\nError: {ex.Message}", "Open File Error");
                 }
-            }
-        }
-
-        public void NewFileInFolder(object param)
-        {
-            try
-            {
-                if (param is DirectoryItem folder && folder.IsDirectory)
-                {
-                    string newFileName = "NewFile.txt";
-                    string newFilePath = Path.Combine(folder.FullPath, newFileName);
-
-                    int counter = 1;
-                    while (File.Exists(newFilePath))
-                    {
-                        newFileName = $"NewFile ({counter}).txt";
-                        newFilePath = Path.Combine(folder.FullPath, newFileName);
-                        counter++;
-                    }
-
-                    File.WriteAllText(newFilePath, string.Empty);
-                    RefreshFolder(folder);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error creating file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -85,9 +103,15 @@ namespace Notepad.ViewModels
         {
             if (param is DirectoryItem folder && folder.IsDirectory && !string.IsNullOrEmpty(folder.FullPath))
             {
-                try { Clipboard.SetDataObject(folder.FullPath, true); }
+                try
+                {
+                    Clipboard.SetText(folder.FullPath);
+                }
                 catch (System.Runtime.InteropServices.COMException) { }
-                catch (Exception ex) { MessageBox.Show($"Copy error: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    _dialogService.ShowError($"Copy error: {ex.Message}", "Error");
+                }
             }
         }
 
@@ -98,12 +122,12 @@ namespace Notepad.ViewModels
                 if (param is DirectoryItem folder && folder.IsDirectory)
                 {
                     ClipboardFolderPath = folder.FullPath;
-                    CommandManager.InvalidateRequerySuggested();
+                    System.Windows.Input.CommandManager.InvalidateRequerySuggested();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"A problem occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Failed to copy the folder.\nError: {ex.Message}", "Copy Folder Error");
             }
         }
 
@@ -120,7 +144,7 @@ namespace Notepad.ViewModels
 
                     if (destPath.StartsWith(ClipboardFolderPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        MessageBox.Show("Cannot copy a folder into itself or into one of its subfolders.", "Action Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _dialogService.ShowWarning("Cannot copy a folder into itself or into one of its subfolders.", "Action Not Allowed");
                         return;
                     }
 
@@ -130,27 +154,84 @@ namespace Notepad.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Paste error: {ex.Message}", "Paste Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"An error occurred during paste.\nError: {ex.Message}", "Paste Folder Error");
             }
         }
 
         private void CopyDirectory(string sourceDir, string destinationDir)
         {
-            try
+            var dir = new DirectoryInfo(sourceDir);
+            if (!dir.Exists) return;
+
+            Directory.CreateDirectory(destinationDir);
+
+            foreach (var file in dir.GetFiles())
             {
-                var dir = new DirectoryInfo(sourceDir);
-                if (!dir.Exists) return;
-                Directory.CreateDirectory(destinationDir);
-                try { foreach (var file in dir.GetFiles()) file.CopyTo(Path.Combine(destinationDir, file.Name), true); } catch { }
-                try { foreach (var sub in dir.GetDirectories()) CopyDirectory(sub.FullName, Path.Combine(destinationDir, sub.Name)); } catch { }
+                try { file.CopyTo(Path.Combine(destinationDir, file.Name), true); }
+                catch (UnauthorizedAccessException) { }
             }
-            catch { }
+
+            foreach (var sub in dir.GetDirectories())
+            {
+                try { CopyDirectory(sub.FullName, Path.Combine(destinationDir, sub.Name)); }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+
+        public ObservableCollection<DirectoryItem> GetLogicalDrives()
+        {
+            var drives = new ObservableCollection<DirectoryItem>();
+            foreach (var drive in Directory.GetLogicalDrives())
+            {
+                var driveItem = new DirectoryItem(LoadChildren) { Name = drive, FullPath = drive, IsDirectory = true };
+                driveItem.Children.Add(new DirectoryItem(null) { Name = "..." });
+                drives.Add(driveItem);
+            }
+            return drives;
+        }
+
+        public void LoadChildren(DirectoryItem item)
+        {
+            if (item.Children.Count == 1 && item.Children[0].Name == "...")
+            {
+                item.Children.Clear();
+
+                try
+                {
+                    foreach (var dir in Directory.GetDirectories(item.FullPath))
+                    {
+                        var subDir = new DirectoryItem(LoadChildren)
+                        {
+                            Name = new DirectoryInfo(dir).Name,
+                            FullPath = dir,
+                            IsDirectory = true
+                        };
+                        subDir.Children.Add(new DirectoryItem(null) { Name = "..." });
+                        item.Children.Add(subDir);
+                    }
+
+                    foreach (var file in Directory.GetFiles(item.FullPath))
+                    {
+                        item.Children.Add(new DirectoryItem(null)
+                        {
+                            Name = Path.GetFileName(file),
+                            FullPath = file,
+                            IsDirectory = false
+                        });
+                    }
+                }
+                catch (UnauthorizedAccessException) { }
+                catch (Exception ex)
+                {
+                    _dialogService.ShowWarning($"Failed to load '{item.Name}'.\nError: {ex.Message}", "Directory Error");
+                }
+            }
         }
 
         private void RefreshFolder(DirectoryItem folder)
         {
             folder.Children.Clear();
-            folder.Children.Add(new DirectoryItem { Name = "..." });
+            folder.Children.Add(new DirectoryItem(null) { Name = "..." });
             folder.IsExpanded = false;
             folder.IsExpanded = true;
         }
