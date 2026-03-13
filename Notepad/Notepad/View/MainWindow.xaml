@@ -11,6 +11,15 @@
         <vm:MainViewModel />
     </Window.DataContext>
 
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewFileCommand}" />
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenFileCommand}" />
+        <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveCommand}" />
+        <KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding SaveAsCommand}" />
+        <KeyBinding Key="W" Modifiers="Ctrl" Command="{Binding CloseFileCommand}" />
+        <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding FindCommand}" />
+    </Window.InputBindings>
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBoolConverter x:Key="InverseBool" />
