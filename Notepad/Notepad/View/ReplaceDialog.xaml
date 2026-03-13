@@ -1,0 +1,18 @@
+﻿<Window x:Class="Notepad.View.ReplaceDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Replace" Height="170" Width="350"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="15">
+        <DockPanel Margin="0,0,0,10">
+            <TextBlock Text="Find:" Width="90" VerticalAlignment="Center" />
+            <TextBox x:Name="txtFind" VerticalAlignment="Center" />
+        </DockPanel>
+        <DockPanel Margin="0,0,0,15">
+            <TextBlock Text="Replace with:" Width="90" VerticalAlignment="Center" />
+            <TextBox x:Name="txtReplace" VerticalAlignment="Center" />
+        </DockPanel>
+
+        <Button Content="Replace" Width="75" HorizontalAlignment="Center" Click="BtnReplace_Click" />
+    </StackPanel>
+</Window>
