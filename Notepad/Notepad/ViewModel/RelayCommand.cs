@@ -10,7 +10,14 @@ namespace Notepad.ViewModel
 
         public RelayCommand(Action<object> execute, Predicate<object> canExecute = null)
         {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            if (execute == null)
+            {
+                throw new ArgumentNullException(nameof(execute));
+            }
+            else
+            {
+                _execute = execute;
+            }
             _canExecute = canExecute;
         }
 
