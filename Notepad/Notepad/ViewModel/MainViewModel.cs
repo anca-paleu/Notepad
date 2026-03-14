@@ -108,10 +108,29 @@ namespace Notepad.ViewModels
             _fileOps = new FileOperations(Documents, () => SelectedDocument, d => SelectedDocument = d, dialogService);
             _searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d, dialogService);
+
             var textOps = new TextOperations(
                 () => SelectedDocument,
-                () => RequestSelectedText?.Invoke() ?? "",
-                () => RequestSelectionStart?.Invoke() ?? -1);
+                () =>
+                {
+                    if (RequestSelectedText != null)
+                    {
+                        var result = RequestSelectedText.Invoke();
+                        if (result != null)
+                        {
+                            return result;
+                        }
+                    }
+                    return "";
+                },
+                () =>
+                {
+                if (RequestSelectionStart != null)
+                {
+                    return RequestSelectionStart.Invoke();
+                }
+                return -1;
+                });
 
             _searchOps.SearchResultFound += (index, length) =>
             {

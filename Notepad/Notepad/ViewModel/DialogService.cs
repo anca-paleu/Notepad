@@ -72,7 +72,14 @@ namespace Notepad.ViewModels
         public string ShowOpenFileDialog()
         {
             var dialog = new OpenFileDialog { Filter = DefaultFileFilter };
-            return dialog.ShowDialog(MainWindow) == true ? dialog.FileName : null;
+            if (dialog.ShowDialog(MainWindow) == true)
+            {
+                return dialog.FileName;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public string ShowSaveFileDialog(string defaultFileName)
