@@ -25,21 +25,26 @@ namespace Notepad.ViewModels
         public void ToUpperCase()
         {
             var doc = _getSelected();
-            if (doc?.TextContent == null) return;
+            if (doc == null) return;
+            if (doc.TextContent == null) return;
+
             doc.TextContent = doc.TextContent.ToUpper();
         }
 
         public void ToLowerCase()
         {
             var doc = _getSelected();
-            if (doc?.TextContent == null) return;
+            if (doc == null) return;
+            if (doc.TextContent == null) return;
+
             doc.TextContent = doc.TextContent.ToLower();
         }
 
         public void RemoveEmptyLines()
         {
             var doc = _getSelected();
-            if (doc?.TextContent == null) return;
+            if (doc == null) return;
+            if (doc.TextContent == null) return;
 
             var lines = doc.TextContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
                                        .Where(l => !string.IsNullOrWhiteSpace(l));
@@ -50,7 +55,8 @@ namespace Notepad.ViewModels
         public void GoToLine(int lineNumber)
         {
             var doc = _getSelected();
-            if (doc?.TextContent == null) return;
+            if (doc == null) return;
+            if (doc.TextContent == null) return;
 
             var lines = doc.TextContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
@@ -63,32 +69,54 @@ namespace Notepad.ViewModels
             int newLineLength = Environment.NewLine.Length;
             int charIndex = lines.Take(lineNumber - 1).Sum(l => l.Length + newLineLength);
 
-            ScrollToLine?.Invoke(charIndex);
+            if (ScrollToLine != null)
+            {
+                ScrollToLine(charIndex);
+            }
         }
 
         public void ToggleReadOnly()
         {
             var doc = _getSelected();
             if (doc == null) return;
+
             doc.IsReadOnly = !doc.IsReadOnly;
         }
 
         public void Copy()
         {
-            var text = _getSelectedText?.Invoke();
+            string text = null;
+            if (_getSelectedText != null)
+            {
+                text = _getSelectedText();
+            }
+
             if (!string.IsNullOrEmpty(text))
+            {
                 _internalClipboard = text;
+            }
         }
 
         public void Cut()
         {
-            var text = _getSelectedText?.Invoke();
+            string text = null;
+            if (_getSelectedText != null)
+            {
+                text = _getSelectedText();
+            }
+
             if (string.IsNullOrEmpty(text)) return;
 
             var doc = _getSelected();
-            if (doc?.TextContent == null) return;
+            if (doc == null) return;
+            if (doc.TextContent == null) return;
 
-            int start = _getSelectionStart?.Invoke() ?? -1;
+            int start = -1;
+            if (_getSelectionStart != null)
+            {
+                start = _getSelectionStart();
+            }
+
             if (start < 0 || start + text.Length > doc.TextContent.Length) return;
 
             _internalClipboard = text;
@@ -98,7 +126,9 @@ namespace Notepad.ViewModels
         public void Paste()
         {
             var doc = _getSelected();
-            if (doc == null || string.IsNullOrEmpty(_internalClipboard)) return;
+            if (doc == null) return;
+            if (string.IsNullOrEmpty(_internalClipboard)) return;
+
             doc.TextContent += _internalClipboard;
         }
     }

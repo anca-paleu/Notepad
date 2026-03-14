@@ -113,8 +113,21 @@ namespace Notepad.ViewModels
                 () => RequestSelectedText?.Invoke() ?? "",
                 () => RequestSelectionStart?.Invoke() ?? -1);
 
-            _searchOps.SearchResultFound += (index, length) => ScrollToSearchResult?.Invoke(index, length);
-            textOps.ScrollToLine += charIndex => ScrollToLine?.Invoke(charIndex);
+            _searchOps.SearchResultFound += (index, length) =>
+            {
+                if (ScrollToSearchResult != null)
+                {
+                    ScrollToSearchResult(index, length);
+                }
+            };
+
+            textOps.ScrollToLine += charIndex =>
+            {
+                if (ScrollToLine != null)
+                {
+                    ScrollToLine(charIndex);
+                }
+            };
 
             NewFileCommand = new RelayCommand(param => _fileOps.CreateNewFile());
 

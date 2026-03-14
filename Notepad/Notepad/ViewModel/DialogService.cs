@@ -82,7 +82,15 @@ namespace Notepad.ViewModels
                 Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
                 FileName = defaultFileName
             };
-            return dialog.ShowDialog(MainWindow) == true ? dialog.FileName : null;
+
+            if (dialog.ShowDialog(MainWindow) == true)
+            {
+                return dialog.FileName;
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }

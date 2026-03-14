@@ -48,8 +48,28 @@ namespace Notepad
                     }), DispatcherPriority.Background);
                 };
 
-                vm.RequestSelectedText = () => FindActiveTextBox()?.SelectedText ?? "";
-                vm.RequestSelectionStart = () => FindActiveTextBox()?.SelectionStart ?? -1;
+                vm.RequestSelectedText = () =>
+                {
+                    var textBox = FindActiveTextBox();
+                    if (textBox != null)
+                    {
+                        if (textBox.SelectedText != null)
+                        {
+                            return textBox.SelectedText;
+                        }
+                    }
+                    return "";
+                };
+
+                vm.RequestSelectionStart = () =>
+                {
+                    var textBox = FindActiveTextBox();
+                    if (textBox != null)
+                    {
+                        return textBox.SelectionStart;
+                    }
+                    return -1;
+                };
             };
         }
 

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Windows;
 using Notepad.Model;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Notepad.ViewModels
 {
@@ -34,13 +35,20 @@ namespace Notepad.ViewModels
             {
                 foreach (var doc in _documents)
                 {
-                    int index = doc.TextContent?.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) ?? -1;
+                    int index = -1;
+                    if (doc.TextContent != null)
+                    {
+                        index = doc.TextContent.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+                    }
                     if (index >= 0)
                     {
                         _setSelected(doc);
                         _lastSearchDoc = doc;
                         _lastFoundIndex = index;
-                        SearchResultFound?.Invoke(index, searchText.Length);
+                        if (SearchResultFound != null)
+                        {
+                            SearchResultFound(index, searchText.Length);
+                        }
                         break;
                     }
                 }
@@ -63,7 +71,10 @@ namespace Notepad.ViewModels
                 {
                     _lastSearchDoc = selected;
                     _lastFoundIndex = index;
-                    SearchResultFound?.Invoke(index, searchText.Length); 
+                    if (SearchResultFound != null)
+                    {
+                        SearchResultFound(index, searchText.Length);
+                    }
                 }
                 else
                 {
@@ -119,7 +130,10 @@ namespace Notepad.ViewModels
                         _setSelected(doc);
                         _lastSearchDoc = doc;
                         _lastFoundIndex = idx;
-                        SearchResultFound?.Invoke(idx, searchText.Length);
+                        if (SearchResultFound != null)
+                        {
+                            SearchResultFound(idx, searchText.Length);
+                        }
                         return;
                     }
                 }
@@ -137,14 +151,17 @@ namespace Notepad.ViewModels
                 if (startPos >= selected.TextContent.Length) startPos = 0;
 
                 int idx = selected.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
-                if (idx < 0 && startPos > 0) 
+                if (idx < 0 && startPos > 0)
                     idx = selected.TextContent.IndexOf(searchText, 0, StringComparison.OrdinalIgnoreCase);
 
                 if (idx >= 0)
                 {
                     _lastFoundIndex = idx;
                     _lastSearchDoc = selected;
-                    SearchResultFound?.Invoke(idx, searchText.Length);
+                    if (SearchResultFound != null)
+                    {
+                        SearchResultFound(idx, searchText.Length);
+                    }
                 }
                 else
                 {
@@ -187,9 +204,15 @@ namespace Notepad.ViewModels
 
                     if (string.IsNullOrEmpty(doc.TextContent)) continue;
 
-                    int searchUpTo = (i == 0 && _lastFoundIndex != -1)
-                                     ? _lastFoundIndex - 1
-                                     : doc.TextContent.Length - 1;
+                    int searchUpTo;
+                    if (i == 0 && _lastFoundIndex != -1)
+                    {
+                        searchUpTo = _lastFoundIndex - 1;
+                    }
+                    else
+                    {
+                        searchUpTo = doc.TextContent.Length - 1;
+                    }
 
                     if (searchUpTo >= 0 && searchUpTo < doc.TextContent.Length)
                     {
@@ -199,7 +222,10 @@ namespace Notepad.ViewModels
                             _setSelected(doc);
                             _lastSearchDoc = doc;
                             _lastFoundIndex = idx;
-                            SearchResultFound?.Invoke(idx, searchText.Length);
+                            if (SearchResultFound != null)
+                            {
+                                SearchResultFound(idx, searchText.Length);
+                            }
                             return;
                         }
                     }
@@ -211,7 +237,8 @@ namespace Notepad.ViewModels
             else
             {
                 var selected = _getSelected();
-                if (string.IsNullOrEmpty(selected?.TextContent)) return;
+                if (selected == null) return;
+                if (string.IsNullOrEmpty(selected.TextContent)) return;
 
                 int searchUpTo;
 
@@ -223,9 +250,12 @@ namespace Notepad.ViewModels
                 {
                     searchUpTo = selected.TextContent.Length - 1;
                 }
-                int idx = searchUpTo >= 0 && searchUpTo < selected.TextContent.Length
-                    ? selected.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase)
-                    : -1;
+
+                int idx = -1;
+                if (searchUpTo >= 0 && searchUpTo < selected.TextContent.Length)
+                {
+                    idx = selected.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase);
+                }
 
                 if (idx < 0 && _lastFoundIndex != selected.TextContent.Length - 1)
                     idx = selected.TextContent.LastIndexOf(searchText, StringComparison.OrdinalIgnoreCase);
@@ -234,7 +264,10 @@ namespace Notepad.ViewModels
                 {
                     _lastFoundIndex = idx;
                     _lastSearchDoc = selected;
-                    SearchResultFound?.Invoke(idx, searchText.Length);
+                    if (SearchResultFound != null)
+                    {
+                        SearchResultFound(idx, searchText.Length);
+                    }
                 }
                 else
                 {
@@ -250,6 +283,12 @@ namespace Notepad.ViewModels
         {
             if (string.IsNullOrEmpty(searchText)) return;
 
+            string safeReplaceText = "";
+            if (replaceText != null)
+            {
+                safeReplaceText = replaceText;
+            }
+
             string pattern = $@"\b{Regex.Escape(searchText)}\b";
 
             var regex = new Regex(pattern, RegexOptions.IgnoreCase);
@@ -260,19 +299,20 @@ namespace Notepad.ViewModels
                 {
                     if (doc.TextContent == null) continue;
 
-                    doc.TextContent = regex.Replace(doc.TextContent, replaceText ?? "");
+                    doc.TextContent = regex.Replace(doc.TextContent, safeReplaceText);
                 }
             }
             else
             {
                 var selected = _getSelected();
-                if (selected?.TextContent == null) return;
+                if (selected == null) return;
+                if (selected.TextContent == null) return;
 
                 var match = regex.Match(selected.TextContent);
 
                 if (match.Success)
                 {
-                    selected.TextContent = regex.Replace(selected.TextContent, replaceText ?? "", 1);
+                    selected.TextContent = regex.Replace(selected.TextContent, safeReplaceText, 1);
                 }
                 else
                 {
@@ -285,8 +325,14 @@ namespace Notepad.ViewModels
         {
             if (string.IsNullOrEmpty(searchText)) return;
 
+            string safeReplaceText = "";
+            if (replaceText != null)
+            {
+                safeReplaceText = replaceText;
+            }
+
             string pattern = $@"\b{Regex.Escape(searchText)}\b";
-            var regex = new Regex(pattern, RegexOptions.IgnoreCase); 
+            var regex = new Regex(pattern, RegexOptions.IgnoreCase);
 
             if (allTabs)
             {
@@ -294,16 +340,17 @@ namespace Notepad.ViewModels
                 {
                     if (doc.TextContent != null)
                     {
-                        doc.TextContent = regex.Replace(doc.TextContent, replaceText ?? "");
+                        doc.TextContent = regex.Replace(doc.TextContent, safeReplaceText);
                     }
                 }
             }
             else
             {
                 var selected = _getSelected();
-                if (selected?.TextContent == null) return;
+                if (selected == null) return;
+                if (selected.TextContent == null) return;
 
-                selected.TextContent = regex.Replace(selected.TextContent, replaceText ?? "");
+                selected.TextContent = regex.Replace(selected.TextContent, safeReplaceText);
             }
         }
     }
