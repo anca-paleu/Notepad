@@ -18,6 +18,17 @@ namespace Notepad
                 var vm = DataContext as MainViewModel;
                 if (vm == null) return;
 
+                vm.PropertyChanged += (sender, args) =>
+                {
+                    if (args.PropertyName == nameof(vm.IsFolderExplorerVisible))
+                    {
+                        if (!vm.IsFolderExplorerVisible)
+                        {
+                            ((Grid)Content).ColumnDefinitions[0].Width = new GridLength(0);
+                        }
+                    }
+                };
+
                 vm.ScrollToSearchResult += (index, length) =>
                 {
                     Dispatcher.BeginInvoke(new Action(() =>
@@ -63,6 +74,7 @@ namespace Notepad
             }
             return null;
         }
+
         private void TextBox_Loaded(object sender, RoutedEventArgs e)
         {
             if (sender is TextBox textBox)
