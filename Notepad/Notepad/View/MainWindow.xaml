@@ -49,26 +49,11 @@
                 <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
-            <MenuItem Header="Edit">
-                <MenuItem Header="Copy"  Command="{Binding CopyCommand}"  CommandParameter="{Binding ElementName=MainTabControl, Path=SelectedItem}" />
-                <MenuItem Header="Cut"   Command="{Binding CutCommand}"   CommandParameter="{Binding ElementName=MainTabControl, Path=SelectedItem}" />
-                <MenuItem Header="Paste"              Command="{Binding PasteCommand}" />
-                <Separator/>
-                <MenuItem Header="To Uppercase"       Command="{Binding ToUpperCaseCommand}" />
-                <MenuItem Header="To Lowercase"       Command="{Binding ToLowerCaseCommand}" />
-                <Separator/>
-                <MenuItem Header="Remove Empty Lines" Command="{Binding RemoveEmptyLinesCommand}" />
-                <MenuItem Header="Go To Line..."      Command="{Binding GoToLineCommand}" />
-                <Separator/>
-                <MenuItem Header="Set/Unset Readonly" Command="{Binding ToggleReadOnlyCommand}" />
-            </MenuItem>
             <MenuItem Header="Search">
                 <MenuItem Header="All tabs"      IsCheckable="True" IsChecked="{Binding SearchAllTabs}" />
                 <MenuItem Header="Selected tab"  IsCheckable="True" IsChecked="{Binding SearchAllTabs, Converter={StaticResource InverseBool}}" />
                 <Separator/>
                 <MenuItem Header="Find..." Command="{Binding FindCommand}"/>
-                <MenuItem Header="Find Next" Command="{Binding FindNextCommand}"/>
-                <MenuItem Header="Find Previous" Command="{Binding FindPreviousCommand}"/>
                 <MenuItem Header="Replace..." Command="{Binding ReplaceCommand}" />
                 <MenuItem Header="Replace All..." Command="{Binding ReplaceAllCommand}" />
             </MenuItem>
@@ -94,9 +79,7 @@
 
                 <Separator Margin="5,0" />
 
-                <Button Content="Find Previous" Command="{Binding FindPreviousCommand}" Margin="3,0"/>
                 <Button Content="Find"       Command="{Binding FindCommand}"         Margin="3,0"/>
-                <Button Content="Find Next"     Command="{Binding FindNextCommand}"     Margin="3,0"/>
                 <Button Content="Replace"    Command="{Binding ReplaceCommand}"      Margin="3,0"/>
                 <Button Content="Replace All" Command="{Binding ReplaceAllCommand}"   Margin="3,0"/>
             </ToolBar>
@@ -197,11 +180,11 @@
                 <DataTemplate>
                     <TextBox AcceptsReturn="True" 
                              TextWrapping="Wrap" 
-                             IsReadOnly="{Binding IsReadOnly}"
                              Text="{Binding TextContent, UpdateSourceTrigger=PropertyChanged}"
                              HorizontalAlignment="Stretch"
                              VerticalAlignment="Stretch"
-                             VerticalScrollBarVisibility="Auto" />
+                             VerticalScrollBarVisibility="Auto"
+                             Loaded="TextBox_Loaded" />
                 </DataTemplate>
             </TabControl.ContentTemplate>
 

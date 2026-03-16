@@ -22,12 +22,6 @@ namespace Notepad.ViewModels
             if (dialog.ShowDialog() == true) onReplace(dialog.FindText, dialog.ReplaceText);
         }
 
-        public void ShowGoToLine(Action<int> onGoTo)
-        {
-            var dialog = new GoToLineDialog { Owner = MainWindow };
-            if (dialog.ShowDialog() == true) onGoTo(dialog.LineNumber);
-        }
-
         public void ShowAbout()
         {
             var dialog = new AboutDialog { Owner = MainWindow };

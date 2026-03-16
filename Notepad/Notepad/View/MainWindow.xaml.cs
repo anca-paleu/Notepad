@@ -32,44 +32,6 @@ namespace Notepad
                             textBox.ScrollToLine(lineIndex);
                     }), DispatcherPriority.Background);
                 };
-
-                vm.ScrollToLine += charIndex =>
-                {
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        var textBox = FindActiveTextBox();
-                        if (textBox == null) return;
-                        textBox.Focus();
-                        textBox.CaretIndex = charIndex;
-                        textBox.Select(charIndex, 0);
-                        int lineIndex = textBox.GetLineIndexFromCharacterIndex(charIndex);
-                        if (lineIndex >= 0)
-                            textBox.ScrollToLine(lineIndex);
-                    }), DispatcherPriority.Background);
-                };
-
-                vm.RequestSelectedText = () =>
-                {
-                    var textBox = FindActiveTextBox();
-                    if (textBox != null)
-                    {
-                        if (textBox.SelectedText != null)
-                        {
-                            return textBox.SelectedText;
-                        }
-                    }
-                    return "";
-                };
-
-                vm.RequestSelectionStart = () =>
-                {
-                    var textBox = FindActiveTextBox();
-                    if (textBox != null)
-                    {
-                        return textBox.SelectionStart;
-                    }
-                    return -1;
-                };
             };
         }
 
@@ -100,6 +62,14 @@ namespace Notepad
                     return result;
             }
             return null;
+        }
+        private void TextBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                textBox.Focus();
+                textBox.CaretIndex = textBox.Text.Length;
+            }
         }
     }
 }

@@ -79,25 +79,12 @@ namespace Notepad.ViewModels
         public ICommand CopyFolderCommand { get; }
         public ICommand PasteFolderCommand { get; }
         public ICommand FindCommand { get; }
-        public ICommand FindNextCommand { get; }
-        public ICommand FindPreviousCommand { get; }
         public ICommand ReplaceCommand { get; }
         public ICommand ReplaceAllCommand { get; }
         public ICommand ExitCommand { get; }
         public ICommand AboutCommand { get; }
-        public ICommand CopyCommand { get; }
-        public ICommand CutCommand { get; }
-        public ICommand PasteCommand { get; }
-        public ICommand ToUpperCaseCommand { get; }
-        public ICommand ToLowerCaseCommand { get; }
-        public ICommand RemoveEmptyLinesCommand { get; }
-        public ICommand GoToLineCommand { get; }
-        public ICommand ToggleReadOnlyCommand { get; }
 
         public event Action<int, int> ScrollToSearchResult;
-        public event Action<int> ScrollToLine;
-        public Func<string> RequestSelectedText { get; set; }
-        public Func<int> RequestSelectionStart { get; set; }
 
         public MainViewModel()
         {
@@ -109,42 +96,11 @@ namespace Notepad.ViewModels
             _searchOps = new SearchOperations(Documents, () => SelectedDocument, d => SelectedDocument = d);
             var dirOps = new DirectoryOperations(Documents, () => SelectedDocument, d => SelectedDocument = d, dialogService);
 
-            var textOps = new TextOperations(
-                () => SelectedDocument,
-                () =>
-                {
-                    if (RequestSelectedText != null)
-                    {
-                        var result = RequestSelectedText.Invoke();
-                        if (result != null)
-                        {
-                            return result;
-                        }
-                    }
-                    return "";
-                },
-                () =>
-                {
-                if (RequestSelectionStart != null)
-                {
-                    return RequestSelectionStart.Invoke();
-                }
-                return -1;
-                });
-
             _searchOps.SearchResultFound += (index, length) =>
             {
                 if (ScrollToSearchResult != null)
                 {
                     ScrollToSearchResult(index, length);
-                }
-            };
-
-            textOps.ScrollToLine += charIndex =>
-            {
-                if (ScrollToLine != null)
-                {
-                    ScrollToLine(charIndex);
                 }
             };
 
@@ -195,14 +151,6 @@ namespace Notepad.ViewModels
                 _searchOps.Find(text, SearchAllTabs);
             }));
 
-            FindNextCommand = new RelayCommand(
-                param => _searchOps.FindNext(LastSearchText, SearchAllTabs),
-                param => !string.IsNullOrEmpty(LastSearchText));
-
-            FindPreviousCommand = new RelayCommand(
-                param => _searchOps.FindPrevious(LastSearchText, SearchAllTabs),
-                param => !string.IsNullOrEmpty(LastSearchText));
-
             ReplaceCommand = new RelayCommand(param => dialogService.ShowReplace(
                 (s, r) => _searchOps.Replace(s, r, SearchAllTabs)));
 
@@ -210,16 +158,6 @@ namespace Notepad.ViewModels
                 (s, r) => _searchOps.ReplaceAll(s, r, SearchAllTabs)));
 
             AboutCommand = new RelayCommand(param => dialogService.ShowAbout());
-
-            CopyCommand = new RelayCommand(param => textOps.Copy(), param => !string.IsNullOrEmpty(RequestSelectedText?.Invoke()));
-            CutCommand = new RelayCommand(param => textOps.Cut(), param => !string.IsNullOrEmpty(RequestSelectedText?.Invoke()));
-            PasteCommand = new RelayCommand(param => textOps.Paste(), param => textOps.HasInternalClipboard);
-
-            ToUpperCaseCommand = new RelayCommand(param => textOps.ToUpperCase());
-            ToLowerCaseCommand = new RelayCommand(param => textOps.ToLowerCase());
-            RemoveEmptyLinesCommand = new RelayCommand(param => textOps.RemoveEmptyLines());
-            ToggleReadOnlyCommand = new RelayCommand(param => textOps.ToggleReadOnly());
-            GoToLineCommand = new RelayCommand(param => dialogService.ShowGoToLine(line => textOps.GoToLine(line)));
 
             Directories = dirOps.GetLogicalDrives();
 
