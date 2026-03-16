@@ -33,6 +33,8 @@ namespace Notepad.ViewModels
 
             if (allTabs)
             {
+                bool found = false;
+
                 foreach (var doc in _documents)
                 {
                     int index = -1;
@@ -49,9 +51,15 @@ namespace Notepad.ViewModels
                         {
                             SearchResultFound(index, searchText.Length);
                         }
+                        found = true;
                         break;
                     }
                 }
+
+                if (!found)
+                    {
+                        MessageBox.Show($"\"{searchText}\" not found.", "Find", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
             }
             else
             {
@@ -124,15 +132,15 @@ namespace Notepad.ViewModels
                     }
                     if (doc.TextContent == null) continue;
 
-                    int idx = doc.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
-                    if (idx >= 0)
+                    int index = doc.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
+                    if (index >= 0)
                     {
                         _setSelected(doc);
                         _lastSearchDoc = doc;
-                        _lastFoundIndex = idx;
+                        _lastFoundIndex = index;
                         if (SearchResultFound != null)
                         {
-                            SearchResultFound(idx, searchText.Length);
+                            SearchResultFound(index, searchText.Length);
                         }
                         return;
                     }
@@ -150,17 +158,17 @@ namespace Notepad.ViewModels
                 int startPos = _lastFoundIndex + 1;
                 if (startPos >= selected.TextContent.Length) startPos = 0;
 
-                int idx = selected.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
-                if (idx < 0 && startPos > 0)
-                    idx = selected.TextContent.IndexOf(searchText, 0, StringComparison.OrdinalIgnoreCase);
+                int index = selected.TextContent.IndexOf(searchText, startPos, StringComparison.OrdinalIgnoreCase);
+                if (index < 0 && startPos > 0)
+                    index = selected.TextContent.IndexOf(searchText, 0, StringComparison.OrdinalIgnoreCase);
 
-                if (idx >= 0)
+                if (index >= 0)
                 {
-                    _lastFoundIndex = idx;
+                    _lastFoundIndex = index;
                     _lastSearchDoc = selected;
                     if (SearchResultFound != null)
                     {
-                        SearchResultFound(idx, searchText.Length);
+                        SearchResultFound(index, searchText.Length);
                     }
                 }
                 else
@@ -216,15 +224,15 @@ namespace Notepad.ViewModels
 
                     if (searchUpTo >= 0 && searchUpTo < doc.TextContent.Length)
                     {
-                        int idx = doc.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase);
-                        if (idx >= 0)
+                        int index = doc.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase);
+                        if (index >= 0)
                         {
                             _setSelected(doc);
                             _lastSearchDoc = doc;
-                            _lastFoundIndex = idx;
+                            _lastFoundIndex = index;
                             if (SearchResultFound != null)
                             {
-                                SearchResultFound(idx, searchText.Length);
+                                SearchResultFound(index, searchText.Length);
                             }
                             return;
                         }
@@ -251,22 +259,22 @@ namespace Notepad.ViewModels
                     searchUpTo = selected.TextContent.Length - 1;
                 }
 
-                int idx = -1;
+                int index = -1;
                 if (searchUpTo >= 0 && searchUpTo < selected.TextContent.Length)
                 {
-                    idx = selected.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase);
+                    index = selected.TextContent.LastIndexOf(searchText, searchUpTo, StringComparison.OrdinalIgnoreCase);
                 }
 
-                if (idx < 0 && _lastFoundIndex != selected.TextContent.Length - 1)
-                    idx = selected.TextContent.LastIndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+                if (index < 0 && _lastFoundIndex != selected.TextContent.Length - 1)
+                    index = selected.TextContent.LastIndexOf(searchText, StringComparison.OrdinalIgnoreCase);
 
-                if (idx >= 0)
+                if (index >= 0)
                 {
-                    _lastFoundIndex = idx;
+                    _lastFoundIndex = index;
                     _lastSearchDoc = selected;
                     if (SearchResultFound != null)
                     {
-                        SearchResultFound(idx, searchText.Length);
+                        SearchResultFound(index, searchText.Length);
                     }
                 }
                 else
@@ -299,7 +307,13 @@ namespace Notepad.ViewModels
                 {
                     if (doc.TextContent == null) continue;
 
-                    doc.TextContent = regex.Replace(doc.TextContent, safeReplaceText);
+                    var match = regex.Match(doc.TextContent);
+
+                    if (match.Success)
+                    {
+                        doc.TextContent = regex.Replace(doc.TextContent, safeReplaceText, 1);
+                        break;
+                    }
                 }
             }
             else

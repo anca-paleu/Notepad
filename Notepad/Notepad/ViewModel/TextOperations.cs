@@ -21,14 +21,34 @@ namespace Notepad.ViewModels
             _getSelectedText = getSelectedText;
             _getSelectionStart = getSelectionStart;
         }
-
         public void ToUpperCase()
         {
             var doc = _getSelected();
             if (doc == null) return;
             if (doc.TextContent == null) return;
 
-            doc.TextContent = doc.TextContent.ToUpper();
+            string selectedText = null;
+            if (_getSelectedText != null)
+            {
+                selectedText = _getSelectedText();
+            }
+
+            if (string.IsNullOrEmpty(selectedText)) return;
+
+            int start;
+            if (_getSelectionStart != null)
+            {
+                start = _getSelectionStart();
+            }
+            else
+            {
+                start = -1;
+            }
+
+            if (start < 0 || start + selectedText.Length > doc.TextContent.Length) return;
+
+            doc.TextContent = doc.TextContent.Remove(start, selectedText.Length);
+            doc.TextContent = doc.TextContent.Insert(start, selectedText.ToUpper());
         }
 
         public void ToLowerCase()
@@ -37,7 +57,28 @@ namespace Notepad.ViewModels
             if (doc == null) return;
             if (doc.TextContent == null) return;
 
-            doc.TextContent = doc.TextContent.ToLower();
+            string selectedText = null;
+            if (_getSelectedText != null)
+            {
+                selectedText = _getSelectedText();
+            }
+
+            if (string.IsNullOrEmpty(selectedText)) return;
+
+            int start;
+            if (_getSelectionStart != null)
+            {
+                start = _getSelectionStart();
+            }
+            else
+            {
+                start = -1;
+            }
+
+            if (start < 0 || start + selectedText.Length > doc.TextContent.Length) return;
+
+            doc.TextContent = doc.TextContent.Remove(start, selectedText.Length);
+            doc.TextContent = doc.TextContent.Insert(start, selectedText.ToLower());
         }
 
         public void RemoveEmptyLines()
@@ -46,7 +87,7 @@ namespace Notepad.ViewModels
             if (doc == null) return;
             if (doc.TextContent == null) return;
 
-            var lines = doc.TextContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None)
+            var lines = doc.TextContent.Split(new[] { "\r\n" }, StringSplitOptions.None)
                                        .Where(l => !string.IsNullOrWhiteSpace(l));
 
             doc.TextContent = string.Join(Environment.NewLine, lines);
@@ -58,7 +99,7 @@ namespace Notepad.ViewModels
             if (doc == null) return;
             if (doc.TextContent == null) return;
 
-            var lines = doc.TextContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var lines = doc.TextContent.Split(new[] { "\r\n"}, StringSplitOptions.None);
 
             if (lineNumber < 1 || lineNumber > lines.Length)
             {
