@@ -23,20 +23,6 @@ namespace Notepad.ViewModels
             set { _selectedDocument = value; OnPropertyChanged(); }
         }
 
-        private string _searchText;
-        public string SearchText
-        {
-            get { return _searchText; }
-            set { _searchText = value; OnPropertyChanged(); }
-        }
-
-        private string _replaceText;
-        public string ReplaceText
-        {
-            get { return _replaceText; }
-            set { _replaceText = value; OnPropertyChanged(); }
-        }
-
         private bool _searchAllTabs;
         public bool SearchAllTabs
         {
@@ -49,18 +35,6 @@ namespace Notepad.ViewModels
         {
             get { return _isFolderExplorerVisible; }
             set { _isFolderExplorerVisible = value; OnPropertyChanged(); }
-        }
-
-        private string _lastSearchText = "";
-        public string LastSearchText
-        {
-            get => _lastSearchText;
-            set
-            {
-                _lastSearchText = value;
-                OnPropertyChanged();
-                CommandManager.InvalidateRequerySuggested();
-            }
         }
 
         public ObservableCollection<DirectoryItem> Directories { get; set; }
@@ -146,8 +120,6 @@ namespace Notepad.ViewModels
 
             FindCommand = new RelayCommand(param => dialogService.ShowFind(text =>
             {
-                if (!string.IsNullOrEmpty(text))
-                    LastSearchText = text;
                 _searchOps.Find(text, SearchAllTabs);
             }));
 
